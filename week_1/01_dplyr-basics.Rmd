@@ -1,18 +1,31 @@
 ---
 title: 'Module 1: R & dplyr basics'
 subtitle: 'PHW251B: Data Visualization for Public Health'
+author: 
+  - "Ilya Moskalenko"
+  - "Andrew Nguyen"
+params:
+  week: "week_1"
 output:
   html_document:
     df_print: paged
 ---
 
+**A NOTE FROM THE INSTRUCTORS** - Parts of this `RMarkdown` file have been updated from the accompanying video to elevate your learning experience. Essentially, we replaced BaseR functions with the available equivalent functions from the `tidyverse` because it is best practice in industry. Some reasons for these best practices include better support for `tidyverse` workflows with the `%>%` operator, is incredibly well documented, and runs faster when working with big data :)
+
+# Part 0
+
+### Global Settings for this Module
+
+```{r setup, echo = FALSE, warning=FALSE, message=FALSE, tidy=TRUE}
+knitr::opts_chunk$set(echo = TRUE, tidy.opts = list(width.cutoff = 85))
+```
+
 # Part 1
 
 ## Introduction
 
-This R Markdown (or .rmd) is a brief review of R programming basics using the dplyr (and greater tidyverse collection) library for data wrangling and cleaning, and is the first of a series of review modules for PHW251B: Data Visualization for Public Health. Students are assumed to have completed some coursework in R, including but not limited to PH142 and/or PHW251. If any wording or concepts are less familiar, please feel free to review said courses. 
-
-Please reach out to Dr. Rain Mocello or the course GSI for any questions you may have, or for assistance in accessing materials for review or practice.
+This `R Markdown` (or `.Rmd`) is a brief review of R programming basics using the `dplyr` (and greater `tidyverse` collection) library for data wrangling and cleaning, and is the first of a series of review modules for `PHW251B: Data Visualization for Public Health`. Students are assumed to have completed some coursework in R, including but not limited to `PH142` and/or `PHW251`. If any wording or concepts are less familiar, please feel free to review said courses. 
 
 ## Objectives
 
@@ -23,22 +36,21 @@ This module intends to provide the user review with these data concepts in R:
 - Subsetting **rows** conditionally with `filter`
 - Subsetting **columns** conditionally with `select`
 - Creating new variables with `mutate`
-- Conditional mutates with `ifelse` and `case_when`
+- Conditional mutates with `if_else` and `case_when`
+- Cleaning column names with `clean_names`
 
 ## Optional additional resources
 
 Of particular alignment to this review markdown includes:
 
-- PH142: Lecture 2 (Working with Data in R and RStudio (dplyr)) <https://ph142-ucb.github.io/fa21/course-schedule/>
+- PH142: Lecture 2 (Working with Data in R and RStudio (`dplyr`)) <https://ph142-ucb.github.io/fa21/course-schedule/>
 
 For review of R and programming basics, these will be helpful to review:
 
 - PHW251: Weeks 1, 4, 5, and 6
 - R4DS (<https://r4ds.had.co.nz/>): Chapter 5
 
-Please reach out to Dr. Rain Mocello or the course GSI for any questions you may have, or for assistance in accessing materials for review or practice.
-
-----------------------------------------------------------------------------------------
+---
 
 A note before we begin! You'll see throughout these .rmds that text will have different appearances based on some characters that surround them. Here's a quick overview of these characters and how they correspondingly change the appearance of text within them once the .rmd is knit (created into a document). These formats are based off of Markdown/HTML language:
 
@@ -68,42 +80,9 @@ We will be using each format for emphasize different variables, file formats, co
 
 `dataset` or `variable` or `function name` or `library`
 
-----------------------------------------------------------------------------------------
+---
 
 # Part 2
-
-## knitr
-
-On with the module!
-
-### Global vs Local Chunk Settings
-
-First, we are going to set the **Global Settings** for your Markdown file using `knitr`. `knitr` is the engine that executes your R code chunks and weaves the code, outputs, and narrative into a single document (HTML, PDF, Word, or Quarto). It runs chunks in order, captures results (figures, tables, printed output), and applies these options to every code chunk. The way to override these **Global Settings** is to apply **Local Settings** within the code chunk itself. For instance, you are going to notice that the following code chunk has the **Global Settings** `knitr::opts_chunk$set(echo = TRUE, tidy = TRUE, tidy.opts = list(width.cutoff = 85))` in the code and the **Local Settings** `echo = FALSE, warning=FALSE, message=FALSE` in the chunk's definition. This is because the **Global Settings** do not apply to the very first code chunk! Also, a **Local Settings** is going to override the **Global Settings**.
-
-### Best Practice Note
-
-As a best practice, DO NOT attach knitr with `library(knitr)`; instead, call it via the namespace, e.g., `knitr::opts_chunk$set(...)` in your setup. Namespacing keeps your search path clean, avoids masking/conflicts, and makes your document more reproducible by explicitly signaling which package provides a function.
-
-### Different Global and Local Chunks
-
-- `echo = TRUE` — show the code in the rendered document
-- `echo = FALSE` — do NOT show the code in the rendered document
-- `warning = FALSE` — run code but suppress warnings in the output
-- `warning = TRUE` — run code and show warnings in the output
-- `message = FALSE` — suppress messages (e.g., package startup notes)
-- `message = TRUE` — show messages (e.g., package startup notes)
-- `tidy = TRUE` — pretty-print displayed code (when echo=TRUE) using formatR if available; respects tidy.opts (e.g., width.cutoff). Affects formatting in the rendered document only, not execution
-- `tidy = FALSE` — show code exactly as written; ignores tidy.opts
-- `tidy.opts` - list(width.cutoff = 85) — pass options to formatR; here, wrap long lines at ~85 characters
-- `fig.align` -  alignment of plot ("left", "center", "right")
-- `fig.width` - figure width in inches
-- `fig.height` - figure height in inches
-
-### Settings for this Module
-
-```{r setup, echo = FALSE, warning=FALSE, message=FALSE, tidy=TRUE}
-knitr::opts_chunk$set(echo = TRUE, tidy = TRUE, tidy.opts = list(width.cutoff = 85))
-```
 
 ## tidyverse
 
@@ -114,14 +93,13 @@ Now we are going to load the `tidyverse` library, which is a collection of tried
 library(tidyverse)
 ```
 
-Of useful reference is the dplyr "cheatsheet", which is a handy reference to the most popular usages of the package: <https://raw.githubusercontent.com/rstudio/cheatsheets/main/data-transformation.pdf>
+Of useful reference is the `dplyr` "cheatsheet", which is a handy reference to the most popular usages of the package: <https://raw.githubusercontent.com/rstudio/cheatsheets/main/data-transformation.pdf>
 
 You can check out other R cheatsheets here: <https://www.rstudio.com/resources/cheatsheets/>
 
 ## Reading in data
 
 Data will be available in many formats, and will need to be read into R and wrangled before it is visualized. Most data will be represented in some form of tabular data (tabular = table, where there are rows and columns), where rows are different observations and columns are different variables, or features. 
-
 Popular tabular formats you may see in R - 
 
 - csv (comma separated values)
@@ -132,26 +110,29 @@ Popular tabular formats you may see in R -
 
 In the code chunk below, we will be reading in data from the California Open Data portal. Open data is public data collected by the state through its routine business activities and published in a format that is easy to search, easy to download and easy to combine with other data sets from other sources; it does not include private or confidential data about individuals. 
 
-We will use the `read_csv` function from `tidyverse's` `readr` package to read in the `asthma_mortality.csv` dataset. 
-
-[ **NOTE** - Parts of this RMarkdown file have been updated from the accompanying video to elevate your learning experience. Essentially, we replaced BaseR functions with the available equivalent functions from the `tidyverse` because it is best practice in industry. Some reasons for these best practices include better support for `tidyverse` workflows with the `%>%` operator, is incredibly well documented, and runs faster when working with big data :) ]
+We will use the `read_csv` function from `tidyverse's` `readr` package to read in the `asthma.csv` dataset. 
 
 `clean_names` from the `janitor` package standardizes data-frame column names so they’re safe, consistent, and easy to work with. It lowercases names, converts spaces/hyphens/punctuation to underscores, removes/normalizes special characters (e.g., accents), collapses multiple separators, trims leading/trailing underscores, and guarantees uniqueness by appending numeric suffixes if needed. You can also choose a naming style (e.g., "snake" [default], "lower_camel", "upper_camel", "screaming_snake"). It works on data.frames/tibbles (and there’s `make_clean_names` for cleaning a character vector of names).
 
 ```{r reading in files}
+# Load 
 library(janitor)
+library(here)
+
+# Pull in the appropriate `week` parameter from YAML
+week <- params$week
 
 # Import raw file
-asthma_mortality_raw <- read_csv("data/asthma_mortality.csv")  
+asthma_raw <- read_csv(here(week, "data", "asthma.csv")) 
 
 # Output column names for raw dataset
-names(asthma_mortality_raw)
+names(asthma_raw)
 
 # Import same file and pipe it through clean_names() [This is a best practice]
-asthma_mortality <- read_csv("data/asthma_mortality.csv") %>% clean_names()
+asthma <- read_csv(here(week, "data", "asthma.csv")) %>% clean_names()
 
 # Output column names cleaned dataset
-names(asthma_mortality)
+names(asthma)
 ```
 
 
@@ -161,22 +142,22 @@ A useful practice when you're familiarizing yourself with reading in files is ac
 
 ```{r preview files}
 # Preview dataset
-head(asthma_mortality)
+head(asthma)
 ```
 
 First, we'll explore the stratifications and then review some ways to subset and filter our dataset based on conditions we set. 
 
-What are the unique vales in the "years", "strata", and "age_group" variables? The first is done for you, and returns the unique values in the dataset _asthma_mortality_ and its variable _year_.
+What are the unique vales in the "years", "strata", and "age_group" variables? The first is done for you, and returns the unique values in the dataset _asthma_ and its variable _year_.
 
 ```{r explore data}
 
 ?unique
 
-unique(asthma_mortality$years)
+unique(asthma$years)
 
-unique(asthma_mortality$strata)
+unique(asthma$strata)
 
-unique(asthma_mortality$age_group)
+unique(asthma$age_group)
 
 ```
 
@@ -197,7 +178,7 @@ $$
 
 ```{r mutations}
 #The first line assigns the new changes to a *new dataset*
-data <- asthma_mortality %>%
+data <- asthma %>%
   mutate(population = (number_of_deaths/age_adjusted_mortality_rate)*1000000)
   
 #Preview the data, or take the "head" of the dataset
@@ -503,4 +484,4 @@ eg2 <- data %>%
 
 ```
 
-Congratulations! You've reached the end of module 1! You can knit this module and keep it for reference, or continue experimenting with R and dplyr tools.
+Congratulations! You've reached the end of module 1! You can knit this module and keep it for reference, or continue experimenting with R and `dplyr` tools.

@@ -78,7 +78,7 @@ Lets go through what each of the pieces in our `YAML` mean in this `R Markdown` 
 week <- params$week
 
 # Eg - of how to read in data with `here` + YAML week
-knitr::include_graphics(here::here(week, "images", "01_yaml.png"))
+knitr::include_graphics(here(week, "images", "01_yaml.png"))
 ```
 
 ---
