@@ -1,0 +1,270 @@
+---
+title: 'Module 0: Orientation'
+subtitle: 'PHW251B: Data Visualization for Public Health'
+author: 'Ilya Moskalenko - University of California, Berkeley'
+params:
+  week: "week_1"
+output:
+  html_document:
+    df_print: paged
+---
+
+# Welcome
+
+Welcome to **PHW251B**! The purpose of this module is to help you get your `RStudio` environment set up on `Datahub` and also some tips and tricks regarding how to leverage the tools from the `knitr` packages for rendering/knitting your outputs. 
+
+---
+
+# DataHub
+
+The R related materials for **PHW251B** are hosted on the `DataHub` which is an open-source, cloud-based computing platform that lets you run RStudio right in your web browser. A benefit of using `DataHub` is that you and your fellow student colleagues are going to have access to the same computational resources, regardless of any differences in local machines/computers. Additionally, the `Rmarkdown` files for modules, exercises, assignments, and data are located in the `week_*` folders. Furthermore, we already pre-installed each of the open source libraries/packages into the **PHW251B** instance of `DataHub` so you already have the tools that you need for the course at your disposal. 
+
+
+# Working with R Projects & `here`
+
+In **PHW251B** we read data and images from week-specific folders (e.g., week_1/data, week_1/images). To keep everyone’s code working on `DataHub`, we pair the use of an R Project and the `here` package.
+
+## R Projects
+
+An `R Project` is just a folder that RStudio treats as a self-contained workspace. In our case, the project is the course repo - `PHW251B/` (you’ll see a file like `PHW251B.Rproj` at the repo root).
+
+What it does
+  - Sets your working directory to the project root whenever you open it.
+  - Keeps settings local to the project.
+  - Reduces “it worked on my machine” problems.
+
+How to open it (every time you work)
+  - In `RStudio` on `DataHub`, open the project by clicking `PHW251B.Rproj`.
+
+Tip -  You can confirm that you are in the right place by running `here::dr_here()` as shown in the following code chunk
+
+```{r}
+here::dr_here()  # should print a path ending in .../PHW251B
+```
+
+## `here` Package
+
+This is the perfect segway into the `here` package. `here` provides you with a safe starting point for paths - the **project root**. This means that you can open up your project on `DataHub` or any other machine and all filepaths are going to be contained (Instead of fragile absolute paths or setwd(), you write)
+
+```{r}
+# Load `here`
+library(here)
+
+# Eg - of how to read in data with `here`
+data = readr::read_csv(here::here("week_1", "data", "asthma.csv"))
+```
+
+--- 
+
+# YAML
+
+`YAML` is the short “front matter” block at the very top of an R Markdown file, placed between two lines of three dashes (`---`). It isn’t `R` code; it’s a human-readable list of settings written as `key: value` pairs that acts like your document’s cover sheet and build instructions. In practice, `YAML` tells `R Markdown` what to call your report (title, subtitle, author), which format to build (HTML, PDF, or Word), and how to apply options like how tables should display. You can also define simple parameters (for example, `week: "week_1"`) to reuse in text and code so updates are easy and consistent. To keep `YAML` working, put it at the very top, use spaces (not tabs) for indentation when nesting options, and include the opening and closing `---` lines. In short, `YAML` centralizes the labels and build options so anyone can knit the file and get the same, correctly formatted output.
+
+Lets go through what each of the pieces in our `YAML` mean in this `R Markdown` file
+
+  - `title` -> The main title of the rendered/knitted document 
+  - `subtitle` -> The subtitle of the rendered document 
+  - `author` -> The author of the rendered document (for exercises and assignment you are going to put your name here)
+  - `params` -> A list of user-defined parameters you can use throughout the document
+    - `week` -> "week_1" creates a parameter named week with the value "week_1"
+      - We use this throughout the course to to drive paths as following
+  - `output` -> Chooses the output format and its options
+      - `html_document` -> render to HTML
+        - `df_print` -> outputs data frames as interactive, paged tables instead of long tables so space is maximized
+        
+## Here we are showing how to read in the `week` parameter directly from `YAML` and use it in the `R Markdown` document
+
+```{r}
+# Pull in the appropriate `week` parameter from YAML
+week <- params$week
+
+# Eg - of how to read in data with `here` + YAML week
+data = readr::read_csv(here::here(week, "data", "asthma.csv"))
+```
+
+---
+
+# Intro to knitr for Rendering/Knitting
+
+## Global vs Local Chunk Settings
+
+First, we are going to set the **Global Settings** for your Markdown file using `knitr`. `knitr` is the engine that executes your R code chunks and **renders/knits** the code, outputs, and narrative into a single document (HTML, PDF, Word, or Quarto). It runs chunks in order, captures results (figures, tables, printed output), and applies these options to every code chunk. The way to override these **Global Settings** is to apply **Local Settings** within the code chunk itself. For instance, you are going to notice that the following code chunk has the **Global Settings** `knitr::opts_chunk$set(echo = TRUE, tidy = TRUE, tidy.opts = list(width.cutoff = 85))` in the code and the **Local Settings** `echo = FALSE, warning=FALSE, message=FALSE` in the chunk's definition. This is because the **Global Settings** do not apply to the very first code chunk! Also, a **Local Settings** is going to override the **Global Settings**.
+
+## Best Practice Note
+
+As a best practice, DO NOT attach knitr with `library(knitr)`; instead, call it via the namespace, e.g., `knitr::opts_chunk$set(...)` in your setup. Namespacing keeps your search path clean, avoids masking/conflicts, and makes your document more reproducible by explicitly signaling which package provides a function.
+
+### Different Global and Local Chunks
+
+- `echo = TRUE` -> show the code in the rendered document
+- `echo = FALSE` -> do NOT show the code in the rendered document
+- `warning = FALSE` -> run code but suppress warnings in the output
+- `warning = TRUE` -> run code and show warnings in the output
+- `message = FALSE` -> suppress messages (e.g., package startup notes)
+- `message = TRUE` -> show messages (e.g., package startup notes)
+- `out.width` ->  output width 
+
+### Global Settings for this Module
+
+```{r setup, echo = FALSE, warning=FALSE, message=FALSE, tidy=TRUE}
+knitr::opts_chunk$set(echo = TRUE, tidy = TRUE, message = TRUE, warning = TRUE, 
+                      fig.align = "center", out.width = '75%', 
+                      tidy.opts = list(width.cutoff = 85))
+```
+
+---
+
+### Examples
+
+#### Displaying code and/or output
+
+##### Global echo=TRUE in action 
+
+This is how you should be rendering your assignments with the code & and output being shown!
+
+```{r}
+# Code is shown (echo=TRUE globally), and output is shown
+summary(cars)
+```
+
+##### Local override -> hide code, show only output
+
+```{r, echo=FALSE}
+paste0("The code is hidden and the output still appears because echo=FALSE")
+```
+
+##### Local override -> show code but hide results
+
+```{r, results='hide'}
+paste0("The code is shown and the output is hidden because results='hide'")
+```
+
+##### Local override -> do NOT evaluate (show code only)
+
+```{r, eval=FALSE}
+paste0("This text does not appear because this chunk is not evaluated when rendering since eval='FALSE'")
+```
+
+#### Messages
+
+##### With default global settings
+
+```{r}
+message("The message is displayed in the output because the global default is set to message=FALSE")
+"Finished"
+```
+
+##### With local override -> do NOT display message
+
+Sometimes the messages are not that informative and may distract from what you are trying to convey to your audience. In instances, like these it is best practice to suppress the message. 
+
+```{r, message=FALSE}
+message("The message is suppressed in the output because the local chunk setting is set to message=FALSE")
+"Finished"
+```
+
+#### Warnings
+
+##### With default global settings
+
+```{r}
+sqrt(-1)   # produces NaN with a warning
+paste0("Warning message is displayed because of global default warning=TRUE")
+```
+
+##### Local override -> do NOT display warning message
+
+```{r, warning=FALSE}
+sqrt(-1)   # produces NaN with a warning
+paste0("Warning message is suppressed because of local chunk setting warning=FALSE")
+```
+
+#### Figures 
+
+
+##### With default global settings
+
+```{r}
+plot(AirPassengers, main = "Global fig options (75% width)")
+```
+
+##### Local override -> 90% width instead of 70%
+
+```{r, out.width = '90%'}
+plot(AirPassengers, main = "Global fig options (90% width)")
+```
+
+---
+
+# RStudio Setup with Global Options 
+
+**Global Options** are `RStudio’s` application-wide preferences—the settings that control how `RStudio` looks and behaves across all projects and sessions in your environment such as `DataHub`. From here you configure things like the editor’s appearance (font, theme), code editing behavior (indentation, function highlighting, rainbow parentheses), and more. These choices persist between sessions and apply by default to any project you open. This part of the module is going to guide you on how to set up your environment with features that are going to enhance your learning and coding ability.
+
+To access your **Global Options** click **Tools** at the top of your RStudio environment -> click **Global Options**.
+
+## Code
+
+In the left sidebar, click **Code**
+
+### Editing
+
+Then click **Editing** tab at the top In the **General** section, select these options
+  - Insert spaces for Tab (2 spaces is standard for the number of spaces a tab creates)  
+  - Auto-detect code indentation
+  - Insert matching parentheses/quotes
+  - Vertically align arguments in auto-indent
+
+Here is how your **Editing** tab should look like after completing these steps
+
+```{r editing image}
+knitr::include_graphics(here::here(week, "images", "01_code-editing.png"))
+```
+
+### Display
+
+Remain in the **Code** pane and click on the **Display** tab 
+
+#### General
+
+In the **General** section
+
+Select these options
+  - Highlight selected word
+  - Show line numbers
+  - Show margin and set Margin column to 80
+  - Highlight selected word
+  - Highlight R function calls (syntax emphasis for function names)
+  - Blinking cursor
+  - Allow drag and drop of text 
+
+### Display
+
+In the section titled **Display**, select the following 
+  - Highlight R function calls
+  - Enable preview of names and hexadecimal colors
+  - Use rainbow parentheses
+  
+Here is how your **Display** tab should look like after completing these steps
+
+```{r display image}
+knitr::include_graphics(here(week, "images", "01_code-display.png"))
+```
+
+## Appearance
+
+In the left sidebar, click **Appearance**
+
+Set
+  - Editor font: choose a font you like 
+  - Editor font size: pick a comfortable size for your code
+  - Help panel font size: pick a comfortable size for the warning & error messages
+  - Editor theme: choose a light or dark theme you prefer 
+  
+Here is how your **Editing** tab should look like after completing these steps
+
+```{r appearance image}
+knitr::include_graphics(here(week, "images",  "01_appearance.png"))
+```  
+
+Click OK (or Apply then OK) to save all changes.
+if any appearance changes don’t immediately take effect.Restart your RStudio session 
