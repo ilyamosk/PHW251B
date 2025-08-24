@@ -1,0 +1,506 @@
+---
+title: 'Module 1: R & dplyr basics'
+subtitle: 'PHW251B: Data Visualization for Public Health'
+output:
+  html_document:
+    df_print: paged
+---
+
+# Part 1
+
+## Introduction
+
+This R Markdown (or .rmd) is a brief review of R programming basics using the dplyr (and greater tidyverse collection) library for data wrangling and cleaning, and is the first of a series of review modules for PHW251B: Data Visualization for Public Health. Students are assumed to have completed some coursework in R, including but not limited to PH142 and/or PHW251. If any wording or concepts are less familiar, please feel free to review said courses. 
+
+Please reach out to Dr. Rain Mocello or the course GSI for any questions you may have, or for assistance in accessing materials for review or practice.
+
+## Objectives
+
+This module intends to provide the user review with these data concepts in R:
+
+- Reading in and saving datasets
+- Explore data with `head` to preview and `unique` to find distinct values
+- Subsetting **rows** conditionally with `filter`
+- Subsetting **columns** conditionally with `select`
+- Creating new variables with `mutate`
+- Conditional mutates with `ifelse` and `case_when`
+
+## Optional additional resources
+
+Of particular alignment to this review markdown includes:
+
+- PH142: Lecture 2 (Working with Data in R and RStudio (dplyr)) <https://ph142-ucb.github.io/fa21/course-schedule/>
+
+For review of R and programming basics, these will be helpful to review:
+
+- PHW251: Weeks 1, 4, 5, and 6
+- R4DS (<https://r4ds.had.co.nz/>): Chapter 5
+
+Please reach out to Dr. Rain Mocello or the course GSI for any questions you may have, or for assistance in accessing materials for review or practice.
+
+----------------------------------------------------------------------------------------
+
+A note before we begin! You'll see throughout these .rmds that text will have different appearances based on some characters that surround them. Here's a quick overview of these characters and how they correspondingly change the appearance of text within them once the .rmd is knit (created into a document). These formats are based off of Markdown/HTML language:
+
+# Header 1 
+## Header 2
+### Header 3
+
+*Italicized*
+
+**Bolded**
+
+***Bolded and italicized***
+
+_Italicized_
+
+`Typefont`
+
+We will be using each format for emphasize different variables, file formats, coding conventions, or other points of interest.
+
+## Document Section
+
+### Subsection
+
+**bolded item of interest**
+
+***<link.com>***
+
+`dataset` or `variable` or `function name` or `library`
+
+----------------------------------------------------------------------------------------
+
+# Part 2
+
+## knitr
+
+On with the module!
+
+### Global vs Local Chunk Settings
+
+First, we are going to set the **Global Settings** for your Markdown file using `knitr`. `knitr` is the engine that executes your R code chunks and weaves the code, outputs, and narrative into a single document (HTML, PDF, Word, or Quarto). It runs chunks in order, captures results (figures, tables, printed output), and applies these options to every code chunk. The way to override these **Global Settings** is to apply **Local Settings** within the code chunk itself. For instance, you are going to notice that the following code chunk has the **Global Settings** `knitr::opts_chunk$set(echo = TRUE, tidy = TRUE, tidy.opts = list(width.cutoff = 85))` in the code and the **Local Settings** `echo = FALSE, warning=FALSE, message=FALSE` in the chunk's definition. This is because the **Global Settings** do not apply to the very first code chunk! Also, a **Local Settings** is going to override the **Global Settings**.
+
+### Best Practice Note
+
+As a best practice, DO NOT attach knitr with `library(knitr)`; instead, call it via the namespace, e.g., `knitr::opts_chunk$set(...)` in your setup. Namespacing keeps your search path clean, avoids masking/conflicts, and makes your document more reproducible by explicitly signaling which package provides a function.
+
+### Different Global and Local Chunks
+
+- `echo = TRUE` — show the code in the rendered document
+- `echo = FALSE` — do NOT show the code in the rendered document
+- `warning = FALSE` — run code but suppress warnings in the output
+- `warning = TRUE` — run code and show warnings in the output
+- `message = FALSE` — suppress messages (e.g., package startup notes)
+- `message = TRUE` — show messages (e.g., package startup notes)
+- `tidy = TRUE` — pretty-print displayed code (when echo=TRUE) using formatR if available; respects tidy.opts (e.g., width.cutoff). Affects formatting in the rendered document only, not execution
+- `tidy = FALSE` — show code exactly as written; ignores tidy.opts
+- `tidy.opts` - list(width.cutoff = 85) — pass options to formatR; here, wrap long lines at ~85 characters
+- `fig.align` -  alignment of plot ("left", "center", "right")
+- `fig.width` - figure width in inches
+- `fig.height` - figure height in inches
+
+### Settings for this Module
+
+```{r setup, echo = FALSE, warning=FALSE, message=FALSE, tidy=TRUE}
+knitr::opts_chunk$set(echo = TRUE, tidy = TRUE, tidy.opts = list(width.cutoff = 85))
+```
+
+## tidyverse
+
+Now we are going to load the `tidyverse` library, which is a collection of tried-and-true data science libraries that work well together (`ggplot2`, `dplyr`, `tidyr`, `readr`, `purrr`, `tibble`, `stringr`, `forcats`, `lubridate`) and are now going to be available in your sessions environment for the remainder of the R Markdown file. You will have to do this with every library that you want to use in a given script or Markdown file. You can find documenation for `tidyverse` functions here <https://www.tidyverse.org/packages/>.
+
+```{r load tidyverse, message=F, warning=F}
+# Load tidyverse library 
+library(tidyverse)
+```
+
+Of useful reference is the dplyr "cheatsheet", which is a handy reference to the most popular usages of the package: <https://raw.githubusercontent.com/rstudio/cheatsheets/main/data-transformation.pdf>
+
+You can check out other R cheatsheets here: <https://www.rstudio.com/resources/cheatsheets/>
+
+## Reading in data
+
+Data will be available in many formats, and will need to be read into R and wrangled before it is visualized. Most data will be represented in some form of tabular data (tabular = table, where there are rows and columns), where rows are different observations and columns are different variables, or features. 
+
+Popular tabular formats you may see in R - 
+
+- csv (comma separated values)
+- tsv (tab separated values)
+- xls, xlsx (Excel files)
+- rdata, rds
+- and others!
+
+In the code chunk below, we will be reading in data from the California Open Data portal. Open data is public data collected by the state through its routine business activities and published in a format that is easy to search, easy to download and easy to combine with other data sets from other sources; it does not include private or confidential data about individuals. 
+
+We will use the `read_csv` function from `tidyverse's` `readr` package to read in the `asthma_mortality.csv` dataset. 
+
+[ **NOTE** - Parts of this RMarkdown file have been updated from the accompanying video to elevate your learning experience. Essentially, we replaced BaseR functions with the available equivalent functions from the `tidyverse` because it is best practice in industry. Some reasons for these best practices include better support for `tidyverse` workflows with the `%>%` operator, is incredibly well documented, and runs faster when working with big data :) ]
+
+`clean_names` from the `janitor` package standardizes data-frame column names so they’re safe, consistent, and easy to work with. It lowercases names, converts spaces/hyphens/punctuation to underscores, removes/normalizes special characters (e.g., accents), collapses multiple separators, trims leading/trailing underscores, and guarantees uniqueness by appending numeric suffixes if needed. You can also choose a naming style (e.g., "snake" [default], "lower_camel", "upper_camel", "screaming_snake"). It works on data.frames/tibbles (and there’s `make_clean_names` for cleaning a character vector of names).
+
+```{r reading in files}
+library(janitor)
+
+# Import raw file
+asthma_mortality_raw <- read_csv("data/asthma_mortality.csv")  
+
+# Output column names for raw dataset
+names(asthma_mortality_raw)
+
+# Import same file and pipe it through clean_names() [This is a best practice]
+asthma_mortality <- read_csv("data/asthma_mortality.csv") %>% clean_names()
+
+# Output column names cleaned dataset
+names(asthma_mortality)
+```
+
+
+Reading in files is simple and just requires some knowledge of the location of your folder. Note that the dataset location above is in relation to the location of your .rmd file; the .rmd file is in the same folder that includes "data", so you don't need to specify any folder that came before. This is an example of a **relative path**, whereas specifying the entire detailed file location from your computer's hard drive would be an **absolute path**.  
+
+A useful practice when you're familiarizing yourself with reading in files is actually going to the file in the RStudio "Files" tab, clicking on the dataset, and selecting "Import Dataset". It'll give you a window that has the **absolute path** at the top under File/URL and a code preview with the **relative path**. 
+
+```{r preview files}
+# Preview dataset
+head(asthma_mortality)
+```
+
+First, we'll explore the stratifications and then review some ways to subset and filter our dataset based on conditions we set. 
+
+What are the unique vales in the "years", "strata", and "age_group" variables? The first is done for you, and returns the unique values in the dataset _asthma_mortality_ and its variable _year_.
+
+```{r explore data}
+
+?unique
+
+unique(asthma_mortality$years)
+
+unique(asthma_mortality$strata)
+
+unique(asthma_mortality$age_group)
+
+```
+
+Note that there's some interesting formatting appearing in the unique values that may require reformatting/cleaning if we want to present it, or simply analyze it without having to type in longer-winded formats. Upon review, it seems as if "x96" may represent "-". We'll create some new variables that have cleaner values later.
+
+# Part 3
+
+## Creating new columns
+
+First, let's create some new continuous variables that are calculations from other continuous variables using the `mutate` function from the `dplyr` package. To start, let's find the approximate population at risk from the number of deaths and age-adjusted mortality rate variables. Note that the reported rate is per 1,000,000 residents.
+
+$$
+mortalityrate = \frac{deaths}{population  at risk}
+$$
+$$
+population at risk = \frac{deaths}{mortality rate}
+$$
+
+```{r mutations}
+#The first line assigns the new changes to a *new dataset*
+data <- asthma_mortality %>%
+  mutate(population = (number_of_deaths/age_adjusted_mortality_rate)*1000000)
+  
+#Preview the data, or take the "head" of the dataset
+head(data)
+```
+
+Note that the population sizes look a bit off -- perhaps too big? This is likely because these were totaled over three year spans (e.g. 2014-2016). If we divide the total population by 3, it approximates the state's current population of ~40 million.
+
+Of course, one can apply any mathematical operations when mutating continuous data (+, -, /, *, ^, etc.). We demonstrate different operations below, which can all be brought into a mutate statement (with the ability to replace numbers with variables as seen before).
+
+```{r maths}
+#Addition
+1+2
+
+#Subtraction
+3-2
+
+#Multiplication
+2*5
+
+#Division
+13/2
+
+#Modulus, or remainder after division
+13%%2
+
+#Exponents
+2^2
+```
+
+Knowing that these are totals over three years, we can get the yearly average by dividing the number of deaths by three.  Try it on your own now, assigning the new variable to `avg_deaths` adding it within the existing `data` dataset.
+
+```{r mutations 2}
+# Solution
+data <- data %>% #note that we use the old dataset to inform the new one
+  mutate(avg_deaths = number_of_deaths/3)
+```
+
+### Creating Columns with Conditional Logic
+
+[ **NOTE** - This sections of the RMarkdown file has been updated from the accompanying video where we replaced BaseR functions with `dplyr` functions to elevate your learning experience. It is best practice in industry to use the `tidyverse`/`dplyr` equivalents for BaseR functions if they are available. This is because it better supports `tidyverse` workflows with the `%>%` operator and runs faster when working with big data :) ]
+
+#### if_else
+
+One of the more powerful tools in the `dplyr/tidyverse` is how we can chain together functions to create new variables conditionally based on a data condition. In this case, the `NAs` (data not available) and `NaNs` (not a number) are pesky and should both be `NAs` for sake of data cleanliness. Say we want to modify our existing `population` variable to reflect this. We can use the function `if_else` from the `dplyr` package to help us do so! 
+
+(Remember, you can see more documentation for a function by typing in `?function()` in the console)
+
+```{r ifelse}
+# Help page for dplyr's type-stable conditional
+?dplyr::if_else
+
+# Plain-English pattern for beginners:
+# if_else(<test>, <value if TRUE>, <value if FALSE>)
+# Note: The TRUE and FALSE values must be the same type (all numeric, or all character, etc.).
+
+# What we’re doing in this chunk:
+# 1) Clean `population` by turning any NaN ("Not a Number", e.g., from 0/0) into a regular missing value (NA).
+#    - We use NA_real_ (a numeric NA) so the column stays numeric.
+# 2) Add a simple flag `missing` that says "Yes" if `population` is NA and "No" otherwise.
+#    - `is.nan()` finds NaN specifically; `is.na()` finds all missing values (including NaN).
+
+data <- data %>%
+  mutate(
+    # If a value in `population` is NaN, replace it with a numeric NA; otherwise keep the original value
+    population = if_else(is.nan(population), NA_real_, population)
+  )
+
+# Quick check: after the replacement, how many NaNs are left? (Should be 0)
+sum(is.nan(data$population))
+
+data <- data %>%
+  mutate(
+    # Create a beginner-friendly missingness flag
+    # In plain words: if `population` is NA, mark "Yes"; if not, mark "No"
+    missing = if_else(is.na(population), "Yes", "No")
+  )
+```
+
+### case_when
+
+A similar and more flexible method for conditionally creating variables is with the `case_when` function from the `dplyr` package, which can allow more than two conditions and two resulting values.
+
+We are also going to deploy a few more functions in our workflow here 
+  - The `summarize` function from the `dplyr` package which aggregates many rows into one or a few summary values (like means or medians) per group or for the whole dataset.
+  - The `quantile` function, a native baseR function, computes percentiles (e.g., 25th, 50th/median, 75th) of a numeric vector, with `na.rm = TRUE` to ignore missing values.
+  - The `pull` function from the `dplyr` package extracts a single column from a data frame/tibble as a plain vector, handy for saving a summarized value into a variable.
+
+In this next exercise, we will examine the spread of values for the age-adjusted mortality rate among those 18+. Then, we will assign a variable `severity` according to if a county belongs to the <25th, <50th, <75th, and 100th percentile of mortality rate values.
+
+```{r case when}
+# 1) FILTER to adults only
+#    - Keep only rows where age_group equals "18+ years"
+#    - This ensures all later calculations (quantiles, labels) are based on the adult subset
+data_adult <- data %>%
+  filter(age_group == "18+ years")
+
+# 2) COMPUTE QUARTILES (25th, 50th/median, 75th) of the adult age-adjusted mortality rate
+#    - quantile() (base R stats) calculates percentiles of a numeric vector
+#    - na.rm = TRUE tells quantile() to ignore missing values (NA) so they don't distort results
+#    - summarize() + pull() returns a single numeric (a scalar) for each percentile
+p_25 <- data_adult %>%
+  summarize(val = quantile(age_adjusted_mortality_rate, 0.25, na.rm = TRUE)) %>%
+  pull(val)
+
+p_50 <- data_adult %>%
+  summarize(val = quantile(age_adjusted_mortality_rate, 0.50, na.rm = TRUE)) %>%
+  pull(val)
+
+p_75 <- data_adult %>%
+  summarize(val = quantile(age_adjusted_mortality_rate, 0.75, na.rm = TRUE)) %>%
+  pull(val)
+
+# (Optional) INSPECT one of the saved thresholds to confirm its value.
+p_25
+
+# TIP (not executed here): read the help for case_when() in the console
+# ?dplyr::case_when
+
+# 3) LABEL SEVERITY using case_when()
+#    - case_when() checks conditions from top to bottom; the first TRUE condition wins
+#    - We handle missing rates first so those rows remain missing (NA) in the label
+#    - Threshold logic -
+#        rate < p_25  -> "Low"
+#        rate < p_50  -> "Medium"  (this line only runs if the first wasn't TRUE)
+#        rate < p_75  -> "Severe"
+#        otherwise    -> "Very severe" (i.e., rate >= p_75)
+data_adult <- data_adult %>%
+  mutate(
+    severity = case_when(
+      is.na(age_adjusted_mortality_rate)  ~ NA_character_,  # keep missing as missing
+      age_adjusted_mortality_rate < p_25  ~ "Low",
+      age_adjusted_mortality_rate < p_50  ~ "Medium",
+      age_adjusted_mortality_rate < p_75  ~ "Severe",
+      TRUE                                ~ "Very severe"    # catch-all for >= p_75
+    )
+  )
+
+# 4 - PREVIEW the result
+#    - Show just the numeric rate and the new severity label, using tail() to peek at the last rows
+tail(
+  data_adult %>% select(age_adjusted_mortality_rate, severity)
+)
+
+
+```
+
+# Part 4 - Subsetting
+
+## Subsetting ROWS by condition with filter
+
+Some of the most fundamental parts of data cleaning require us to subset, or subdivide our dataset into smaller pieces given that it belongs to some group or has some matching attribute.
+
+We can select observations, or rows, by condition using the `filter` function from the `dplyr` package, where observations will remain in the dataset if it matches a condition you set.
+
+Some things that can help when filtering:
+
+- "x == y", equality operator, so this statement is saying _x should "equal" y_.
+
+- "x == y | x == z", the vertical line | (below the backspace/delete button) is equivalent to "OR". The statement should then mean that _x should equal y OR z_.
+
+- "x == y & x == z", as it implies, the observation must match both conditions. The statement should then mean that _x should equal y AND z_.
+
+[UPDATE in TIPS & TRICKS]
+- `%in%` vs == for multiple matches. Use == when comparing a column to one value; use %in% when comparing to several values in vector format c().
+
+
+```{r filter, warning=F, message=F}
+# Here we start with filtering practice. This first line will ask for rows that have Low severity
+data_adult %>%
+  filter(severity == "Low")
+
+# Here we take another step and want to filter for either Low or Medium using %in% because we are filtering using more than 1 value
+data_adult %>%
+  filter(severity %in% c("Low", "Medium"))
+
+# What would the filter function look like if we wanted counties with Low severity and for the 2014-2016 time period?
+data_adult %>%
+  filter(severity == "Low" & str_detect(string = years, pattern = "2014"))
+
+# This will be covered more in-depth in later modules, but here we use a function called "str_detect", or "string detect", that looks into the "years" column for any strings that match "2014". If it detects "2014", it will return true. Therefore, the filter will look for rows that match both severity == "Low" AND having a string in year that includes "2014".
+
+# What arguments to the filter function would we make if we wanted counties with Low OR medium severity? Assign this to a dataset called "temp"
+temp <- data_adult %>%
+  filter(severity == "Low" | severity == "Medium")
+```
+
+Sometimes it's easier to specify one condition that you **do NOT** want to match instead of all of the conditions that you do want to match. For example, it's easier to say that you want all observations that **do NOT** match "Very severe" rather than specify that you want Low, Medium, and Severe. In R, we can use the "!=" to specify an inequality operator.
+
+```{r filter 2, warning=F, message=F}
+temp <- data_adult %>%
+  filter(severity != "Very severe")
+
+head(temp)
+```
+
+## Subsetting COLUMNS by condition with select
+
+Now that we have covered rows, we can review subsetting entire columns, or variables using the `select` function from the `dplyr` package. This is useful when you only want to keep relevant columns from large datasets. This can simplify analyses or just make the datasets more portable. In the case of data visualizations, subsetting columns are usually a necessity, especially when it comes to printing tables (and less so for graphics themselves). 
+
+Like before, we can simply select columns for subsetting by conditions, which is often more straightforward than rows (because we can use column names or numbers).
+
+```{r select, warning=F, message=F}
+#Select variables associated with county,  and severity from data_adult dataframe and assign to a new dataframe
+new <- data_adult %>%
+  select(comment, county, severity)
+
+#Select the same variables, but using each variable's respective number 
+
+new <- data_adult %>%
+  select(1, 5, 9)
+
+
+#Select columns from years to comment. This can be done with the ":" operator
+
+#First way, by name
+new <- data_adult %>%
+  select(years:comment)
+
+#Second way, by number of column
+new <- data_adult %>%
+  select(2:7)
+
+```
+
+What if you just want to subset every other column except for one (or a "select" few)? There's a similar method to the inequality operator seen being used with the filter statements. For select methods, we can simply put a "-" (dash) in front of the columns we **don't** want. The subset will then include every column except for the ones in the select statement.
+
+```{r select 2, warning=F, message=F}
+
+#make a copy of the data_adult dataset, just without the "comment" variable
+data_adult_clean <- data_adult %>%
+  select(-comment)
+
+#check the variable/column names of the new dataset
+names(data_adult_clean)
+
+
+data_adult_clean <- data_adult %>%
+  select(-c(comment, strata))
+```
+
+## Exercises
+
+Now let's bring it all together! Let's use a series of `mutate`, `filter`, and `select` to create streamlined datasets from our original asthma mortality data. We'll also be using `str_detect` that we saw in the filter section. As always, if you want more information about a function, feel free to look up the documentation with `?function`.
+
+This section will also be a brief look into/review on how to "chain" functions using the **pipe operator**, as explored in the beginning of this module. If you would like more clarity on the pipe operator after this module, here's a helpful blog post on it: <https://www.analyticssteps.com/blogs/using-pipe-operator-simplify-your-code-r-programming>
+
+For our first exercise, let's create a new dataset that includes data for all years and is of those 0-17 years in age. We are most interested in the county, number of deaths, population, and mortality rate. So, our data steps may look similar to the following steps.
+
+- Make a copy of the original data (new_data <- old data)
+- Optional: Clean the year text so they are more legible
+- Filter for the relevant age group
+- Select relevant columns
+
+```{r exercises, message=F, warning=F}
+#Call documentation for str_detect function
+?str_detect
+
+eg1 <- data %>%
+  mutate(years = ifelse(test = str_detect(string = years, pattern ="2014"), 
+                        yes = "2014-2016", 
+                        no = "2017-2019")) %>%
+  filter(str_detect(string = age_group, pattern = "17")) %>%
+  select(county, number_of_deaths, population, age_adjusted_mortality_rate)
+
+
+head(eg1)
+```
+
+Now, try making a new dataset called `ex2` that is a copy of the original dataset, with the following changes:
+
+- Has a new column called `populous` that has values `Yes` if the population variable is equal or greater than 100,000 and `No` if the population is less than 100,000. Remember that R can use comparison operators like (>, <, =>, =<, etc.). The function `ifelse` may be useful
+
+- Has clean `year` and `age-group` values (clean it such that the error characters no longer exist). The functions `str_detect` and `ifelse` may be useful
+
+- Filter the dataset the remove rows where there are any `NA` values in mortality rate OR population variable (this means that you want to keep rows where BOTH columns have real, non-NA numbers)
+
+- Select any combination of columns that you would want to report on if you were exploring asthma mortality in California (no wrong answers)!
+
+```{r exercises 2, message=F, warning=F}
+
+eg2 <- data %>%
+  mutate(populous = ifelse(test = population >= 100000,
+                           yes = "Yes",
+                           no = "No"),
+         years = ifelse(test = str_detect(string = years, pattern = "2014"),
+                       yes = "2014-2016",
+                       no = "2017-2019"),
+         age_group = case_when(str_detect(string = age_group, pattern = "All ages") ~ "All ages",
+                               str_detect(string = age_group, pattern = "17") ~ "0-17 years",
+                               str_detect(string = age_group, pattern = "18") ~ "18+ years")
+         ) %>%
+  filter(is.na(age_adjusted_mortality_rate) == F & is.na(population) == F) %>%
+  select(-comment)
+
+
+eg2 <- data %>%
+  mutate(populous = ifelse(population >= 100000, "Yes", "No"),
+         years = ifelse(str_detect(years, "2014"), "2014-2016", "2017-2019"),
+         age_group = ifelse(str_detect(age_group, "17"), "0-17 years", "18+ years")) %>%
+  filter(is.na(age_adjusted_mortality_rate) == F & is.na(population) == FALSE) %>%
+  select(- comment)
+
+```
+
+Congratulations! You've reached the end of module 1! You can knit this module and keep it for reference, or continue experimenting with R and dplyr tools.

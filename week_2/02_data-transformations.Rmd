@@ -1,0 +1,568 @@
+---
+title: 'Module 2: Data Transformations'
+subtitle: 'PHW251B: Data Visualization for Public Health'
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, echo = FALSE, warning=F, message=F}
+library(formatR)
+library(janitor)
+knitr::opts_chunk$set(echo = TRUE, tidy = TRUE, tidy.opts = list(width.cutoff = 85))
+```
+
+# Part 1
+
+## Introduction
+
+R is incredibly powerful when it comes to transforming data such that the structure is more amenable for data visualization. In this module, we'll go over functions and methods that are commonly employed during data wrangling for data visualization and overall data analysis. You may hear that an underlying goal is to "tidy" data and to end up with "tidy data". That entails three baseline objectives:
+
+- Each variable must have its own column.
+
+- Each observation must have its own row.
+
+- Each value must have its own cell.
+
+(Source: [R4DS](https://r4ds.had.co.nz/))
+
+These data principles ensure that all datasets you have at the point of analysis and visualization are standard and legible. Furthermore, having this tidy format is important for many functions in R to perform properly (i.e. if they are "vectorized", which may be beyond the scope of this module but if you are interested in what this means in the overall scheme of data science, feel free to reach out! [Here's a quick explanation for the curious](https://stackoverflow.com/questions/11965515/how-to-define-a-vectorized-function-in-r#:~:text=Vectorized%20functions%20usually%20refer%20to,tailored%20to%20the%20particular%20task.).) 
+
+## Objectives
+
+This module intends to provide the user review with these data concepts in R:
+
+- Grouping and summarizing data with `group_by` and `summarise`
+- Extending/expanding data with `pivot_longer` and `pivot_wider`
+- Joining datasets 
+- Factoring categorical variables
+
+Please note that this module will build off of concepts and methods reviewed in module 1.
+
+As mentioned in the previous module(s), cheatsheets can be extremely useful for reference. [Here's the dplyr cheatsheet](https://raw.githubusercontent.com/rstudio/cheatsheets/main/data-transformation.pdf).
+
+Other resources that are aligned with this module include:
+
+- R4DS: Chapters 12, 13, 15
+- PHW251: Weeks 5, 6, 8, 10
+
+## The Data
+
+The main dataset for today's module is the **Gapminder** dataset, which is a freely available sociodemographics dataset developed by the independent Swedish research foundation of the same name. Read more about it here: <https://www.gapminder.org/about/>
+
+The main data frame `gapminder` has 1704 rows and 6 variables:
+
+- country: factor with 142 levels
+- continent: factor with 5 levels
+- year: ranges from 1952 to 2007 in increments of 5 years
+- lifeExp: life expectancy at birth, in years
+- pop: population
+- gdpPercap: GDP per capita (US$, inflation-adjusted)
+
+Other datasets used today include data from **World Bank** and **UNESCO**: <https://data.worldbank.org/>
+
+The dataset `edu` spans 1960 to 2021 and specifically describes the percentage of a country's GDP as a expenditure towards education. It includes 266 rows and 67 variables (it is a "wide" dataset that features each year as a variable). 
+
+The last dataset `ca_vaccine` is from **CA Open Data** and describes the trends of COVID-19 vaccination by ZIP code. In its raw form, it has 135828 rows and 15 variables: <https://data.ca.gov/dataset/covid-19-vaccine-progress-dashboard-data-by-zip-code>
+
+We are specifically interested in:
+
+- as_of_date
+- percent_of_population_fully_vaccinated
+- percent_of_population_partially_vaccinated
+
+**Let's get started!**
+
+```{r load data, echo = F, message=F, warning = F}
+#Here, you will have to install the package "gapminder" if you do not already have it
+install.packages("gapminder", repos = "http://cran.us.r-project.org")
+
+#Here, we load the gapminder and tidyverse package
+library(gapminder)
+library(tidyverse)
+
+#Load gapminder dataset into an dataframe called "data"
+data <- gapminder::gapminder
+
+#Take a peek at the dataset
+head(data)
+
+#Look at unique values of "continent" variable (the $ accesses a variable in the dataset)
+unique(data$continent)
+```
+
+## Grouping and summarizing
+
+The main focus of these following functions is for **data aggregation**. If you want to group observations by a categorical variables and summarize them within those categories, these methods will be useful. 
+
+Imagine with `group_by`, you are splitting your original dataset into several sub-datasets determined by your categorizing variable. Then, whatever summarizing methods you call are done for each sub-dataset and combined back into a full dataset where each row is the a single sub-dataset that has been aggregated. Please refer to the following illustration for a graphical depiction of this concept.
+
+![Illustration of grouping & summarizing](data/images/02_groupby-summarizing.png)
+
+Let's start by grouping by the `continent` variable and then finding the average population size (`pop`) and average GDP per capita (`gdpPercap`). When we summarize these variables, we can assign them to new variable names. For clarity, we'll name the new aggregated variables "avg_pop" and "avg_gdp". 
+
+Remember, we specify the `na.rm` parameter to make sure our summary functions don't return NAs when there are missing values. 
+
+The general format of grouping and summarizing is as follows: 
+
+dataframe %>%
+  group_by(grouping variable) %>%
+  summarize(aggregating functions)
+  
+```{r grouping, message=F, warning=F}
+continents_agg <- data %>%
+  group_by(continent) %>%
+  summarize(avg_pop = mean(pop, na.rm = T),
+            avg_gdp = mean(gdpPercap, na.rm = T))
+
+#Try comparing the original dataset to the new dataset aggregated by continent. Note how each observation is now a continent rather than a country.
+head(data)
+head(continents_agg)
+```
+
+Note that the newly aggregated dataset only has five (5) observations, one for each continent. In other words, **grouping and summarizing will change the granularity of the resulting dataset to the granularity of the variables you group by**. Even though we did not specify a column named "continent" in our `summarize` function, the final dataset keeps that column, courtesy of the `group_by` function, since that is now our level of granularity.
+
+How about when we want group by more than one variable? This would give us flexibility in terms of granularity and analysis. Fortunately, `group_by` can take multiple columns! The new dataset will have observations that are granular to all variables specified.
+
+For the next code chunk, we will:
+
+- Group by both continent and year
+- Create summary variables for number of countries in each continent, average population, and average gdp
+
+```{r grouping 2, message=F, warning=F}
+
+continents_yr_agg <- data %>%
+  group_by(continent, year) %>%
+  summarise(n_countries = n(),
+            avg_pop = mean(pop, na.rm = T),
+            avg_gdp = mean(gdpPercap, na.rm = T))
+
+head(continents_yr_agg)
+
+```
+
+Note that there are now two columns in the resulting dataframe that we didn't specify in our `summarise` function: continent and year! This dataset is, as planned, granular to each continent and year combination. 
+
+```{r grouping 3, warning=F, message=F}
+
+#A quick demonstration on the power of grouping and data visualization. Note that each point in the scatter/line plot is an observation in the grouped/summarized dataframe. A thought experiment: what would the original dataset look like, if we were graphing life expectancy over time?
+
+ggplot(data %>% 
+         group_by(year, continent) %>%
+         summarise(avg_lifeExp = mean(lifeExp, na.rm = T)),
+       aes(x = year, y = avg_lifeExp, color = continent)) +
+  geom_point() +
+  geom_smooth() +
+  theme_classic() +
+  labs(x = "Year",
+       y = "Average life expectancy, in years of age",
+       color = "Continent",
+       title = "Gapminder: life expectancy trends of late 20th century, by continent")
+
+```
+
+Here's an exercise to try on your own: create a new dataset aggregated by continent and year that has a new variable indicating if a continent has an average life expectancy equal/greater or less than the overall average. You can name the new variable "lifeExp_cat" and the corresponding values "Above average" and "Below average", respectively.
+
+```{r grouping 4, message=F, warning=F}
+#find average life expectancy across entire dataset
+mean_lifeExp <- mean(data$lifeExp, na.rm = T)
+
+data %>%
+  group_by(continent, year) %>%
+  summarise(avg_lifeExp = mean(lifeExp, na.rm = T)) %>%
+  mutate(lifeExp_cat = ifelse(avg_lifeExp >= mean_lifeExp, "Above average", "Below average"))
+```
+
+# Part 2
+
+## Extending/expanding data with pivots
+
+Aggregating data by category is incredibly useful. However, cleaning may be needed beforehand. Some particular issues may arise with non-tidy datasets, especially when:
+
+- One variable might be spread across multiple columns.
+- One observation might be scattered across multiple rows.
+
+```{r pivot data prep, include = F}
+#You can ignore this code chunk!
+
+too_wide <- data %>%
+  select(country, continent, year, lifeExp) %>%
+  pivot_wider(names_from = year, values_from = lifeExp)
+
+longer <- data %>%
+  pivot_longer(cols = c("lifeExp", "pop", "gdpPercap"), names_to = "variable", values_to = "value")
+
+too_long <- rbind(data %>% 
+                    select(country, continent, year, lifeExp) %>%
+                    rename("value" = "lifeExp") %>%
+                    mutate(variable = "lifeExp"),
+                  data %>%
+                    select(country, continent, year, gdpPercap) %>%
+                    rename("value" = "gdpPercap") %>%
+                    mutate(variable = "gdpPercap")) %>%
+  arrange(country, year)
+```
+
+
+Lets look at how the same data can be "wider" or "longer". An image is also included to visualize how data can pivoted.
+
+```{r pivot peek, warning=F, message=F}
+#The original data
+head(data)
+
+#Said data, but wider based on years and lifeExp
+head(too_wide)
+
+#Said data, but longer based on lifeExp and gdpPercap
+head(too_long)
+
+```
+![Illustration of pivoting](data/images/02_pivoting.png)
+
+**pivot_longer**
+
+This is useful when there are multiple columns that could be captured in one column. In the dataframe below, we see that there are multiple columns representing different years. The values of each are the country's life expectancy for each recorded year. In practice, the multiple year columns could be captured by a single year column, especially if you wanted to visualize trends over time or investigate correlations between year and other variables. This dataset is fittingly coined a "wide" dataset. 
+
+Let's see how `pivot_longer` can help us create a "longer" dataset with the multiple year columns captured in one column from the "too_wide" dataset.
+
+```{r pivot longer, message=F, warning=F}
+
+#Call documentation for pivot_longer (something that in honesty, I call every single time I use it - Andrew)
+?pivot_longer
+
+#Take a peek at the dataframe before pivoting
+head(too_wide)
+
+#Code in plain words: we want to pivot the columns from "1952" to "2007". What used to be the column names will be values in a new variable named "year". What used to be the values for each row will now go into a new variable named "lifeExp".
+less_wide <- too_wide %>%
+  pivot_longer(cols = ("1952":"2007"), names_to = "year", values_to = "lifeExp")
+
+#Take a peek at the resulting dataframe
+head(less_wide)
+```
+
+Looks good! If you have been paying attention, yes, this is what the original dataset from Gapminder looked like (which is good that a public research entity is publishing tidy data!).
+
+**pivot_wider**
+
+Next, we'll look at a dataset that is too long, where one observation is captured in more than one observation/row. We can use `pivot_wider` to reduce redundancy. 
+
+```{r pivot wider, message=F, warning=F}
+# Call documentation for pivot_wider (you may notice that these examples draw suspicious and heavy inspiration from these documentation, which just goes to show their value!)
+?pivot_wider
+
+head(too_long)
+
+# In plain words - we take the distinct variable names from the "variable" column, and retain their individual values from the "value" column
+less_long <- too_long %>%
+  pivot_wider(names_from = variable, values_from = value)
+
+head(less_long)
+```
+
+Is it interesting because longer datasets are actually sometimes useful for data visualization. Like the `too_long` dataset, the values of different variables are captured in the same field but have another variable that distinguishes them (the _variable_ field). If we plotted that longer dataset, you could plot two variables on the same plot to see if trendlines are in the same direction (with caveats that sometimes the scales are different -- this can be a source of miscommunication, which we will discuss later in the course). However, to illustrate this, let's plot the percentage of Californian residents fully and partially-vaccinated for COVID-19. The dataset is described in the module introduction.
+
+Essentially, with a "longer" dataset, one can plot values of one variable against another variable if they are in the same column. There are other methods to do this without a longer dataset, but it is important to know that it is possible. 
+
+```{r pivot longer demo, warning=F, message=F}
+ca_vaccines <- read_csv("https://data.chhs.ca.gov/dataset/ead44d40-fd63-4f9f-950a-3b0111074de8/resource/ec32eece-7474-4488-87f0-6e91cb577458/download/covid19vaccinesbyzipcode_test.csv") %>% clean_names()
+
+
+ca_vaccines_longer <- ca_vaccines %>%
+  group_by(as_of_date) %>%
+  summarise(fully = mean(percent_of_population_fully_vaccinated, na.rm = T),
+            partially = mean(percent_of_population_partially_vaccinated, na.rm = T)) %>%
+  pivot_longer(cols = c("fully", "partially"), names_to = "vaccination", values_to = "percentage")
+
+
+ggplot(ca_vaccines_longer,
+       aes(x = as_of_date, y = percentage, color = vaccination)) +
+  geom_point() +
+  geom_smooth()
+```
+
+# Part 3
+
+## Joining data
+
+Sometimes we want to append our datasets with additional data available in other datasets. We can do this by joining the datasets using "keys", or unique values that allow the datasets to be matched, observation by observation, to one another. Unique keys can be captured in one or more variables and should be the most granular level of the dataset. 
+
+We will be using an education expenditure dataset sourced from The World Bank/UNESCO that describes the % of a country's GDP being spent on education and the year that the data was last recorded.
+
+Note that the dataset is actually untidy. For your review, these are they data cleaning steps taken:
+
+- Skip the first four rows that are extraneous information
+- Pivot the dataset longer, with year columns captured by a single variable
+
+You can try this yourself, but a pre-cleaned dataset will be imported after just in case.
+
+```{r joins data, message=F, warning=F}
+
+#import data downloaded from World Bank/UNESCO
+edu <- read_csv("data/edu.csv", skip = 4) %>%
+  clean_names() %>%
+  rename_with(~ sub("^x", "", .x), x1960:x2021)
+
+#pivot the dataset 
+edu_clean <- edu %>%
+  pivot_longer(cols = "1960":"2021", names_to = "year", values_to = "edu_exp") %>%
+  filter(is.na(edu_exp) == F)
+
+```
+
+There are several useful types of joins! The basic structure of a join includes two datasets, x and y, that are joined by a unique field key. Here are some brief summaries of said operations:
+
+- **Left join**: the most common, where x and y are joined by z, and all observations from x are kept. If there are observations from y that didn't match x when joined by variable z, it is not kept in the final dataset.
+
+- **Right join**: like a left join, but observations in y rather than from x. In practice, there's no difference and most people default to left joins because it makes a bit more sense.
+
+- **Inner join**: only observations from x AND y and successfully joined by z are kept. Observations that do not match on z are excluded.
+
+- **Full join**: all observations in x OR y are kept, regardless if they match on z.
+
+- **Outer join**: observations that **aren't** joined by z are kept. Any matching observations are excluded. More prominent in the Python library `pandas`; R and `dplyr` doesn't widely advertise something similar. Can be achieved with a negative operator and a join or filter function and can be an interesting data-cleaning tool (e.g. find which observations you still need to collect data for).
+
+For the purposes of this joins playground, x will refer to the original gapminder dataset and y will refer to the new World Bank/UNESCO dataset. We'll join on country name and year.
+
+```{r joins playground, message=F, warning=F}
+
+#We'll import the pre-cleaned dataset, rename the country field for parity, and select relevant columns
+edu_clean <- read_csv("data/edu_clean.csv") %>%
+  rename("country" = "country_name") %>%
+  select(country, year, edu_exp)
+
+#Take a peek at the two datasets before beginning
+head(data)
+head(edu_clean)
+
+#Left join
+left <- left_join(x = data,
+                  y = edu_clean, 
+                  by = c("country", "year"))
+
+#Take a look and explore the new dataset! Note that Afghanistan doesn't have any data from the World Bank/UNESCO dataset but was retained because it appeared in the gapminder dataset and this was a left join
+view(left)
+
+
+#Inner join
+inner <- inner_join(x = data,
+                  y = edu_clean, 
+                  by = c("country", "year"))
+
+#Take a look at the inner-joined dataset -- it has only 242 rows compared to the 1704 of the left joined data! That means there was only 242 observations from gapminder and World Bank/UNESCO that matched on country name and year.
+nrow(inner)
+view(inner)
+
+#Full join
+full <- full_join(x = data,
+                  y = edu_clean, 
+                  by = c("country", "year"))
+
+#That's a lot of rows! We kept all possible observations from both datasets, and there's a lot of missing values, unfortunately. This may be good to look at all of the data you have, but is not as useful or succinct for analysis or visualization.
+nrow(full)
+view(full)
+```
+
+In the next code chunk, try joining the data like we did above with whichever join operation (left, inner, full) that you would like. However, the edu_clean dataset won't have renamed columns like we did above. Try to look at the documentation and see how we can still perform the join by country name even though the two columns aren't the same in name.
+
+```{r join exercise, message=F, warning=F}
+?dplyr::join
+
+edu_clean <- read_csv("data/edu_clean.csv")
+
+#Left join
+left <- left_join(x = data,
+                  y = edu_clean, 
+                  by = c("country" = "country_name", "year"))
+```
+
+# Part 4
+
+## Categorical variables and factors
+
+This last section for the module is a bit more subtle than grouping, pivoting, and joining. However, it's super useful in data visualization. 
+
+Give this scenario: we have a categorical variable encoded as numerical values. If we tried to graph this data and color the graph by the categorical variable, there's a high likelihood that the graphics package will interpret the numerical values as a continuous scale and symbolize it accordingly. Let's create an example:
+
+```{r factors data, message=F, warning=F}
+#You don't need to necessarily know what is going on in this code chunk, but it's good to poke around and have a general understanding of what operations are happening -- it's good review!
+unique(data$continent)
+
+continent_scale <- tibble(continent = c("Asia", "Europe", "Africa", "Americas", "Oceania"),
+                          cont = c(1, 2, 3, 4, 5))
+
+data_cont <- left_join(x = data, y = continent_scale, by = "continent")
+```
+Here, we have appended numbers to represent the categorical variable `continent` in our original gapminder dataset, where:
+
+- Asia = 1
+- Europe = 2
+- Africa = 3
+- Americas = 4
+- Oceania = 5
+
+Let's see when we try to graph these data and symbolize by the `cont` variable that numerically reflects the `continent` variable. It's the same code that we employed in the **group_by** section. 
+
+```{r factors graph 1, echo=F, warning=F, message=F}
+ggplot(data_cont %>% 
+         group_by(year, cont) %>%
+         summarise(avg_lifeExp = mean(lifeExp, na.rm = T)),
+       aes(x = year, y = avg_lifeExp, color = cont)) +
+  geom_point() +
+  geom_smooth() +
+  theme_classic() +
+  labs(x = "Year",
+       y = "Average life expectancy, in years of age",
+       color = "Continent (unfactored)",
+       title = "Gapminder: life expectancy trends of late 20th century, by continent")
+```
+
+Note that because the continent values are now understood as a continuous variable, we don't get:
+
+1) separate smoothed lines for each continent
+2) separate colors for each continent
+
+We can address this by simply factoring the variable of interest using `as.factor`, as seen below. 
+```{r factors graph 2, echo = F, warning=F, message=F}
+ggplot(data_cont %>% 
+         group_by(year, cont) %>%
+         summarise(avg_lifeExp = mean(lifeExp, na.rm = T)),
+       aes(x = year, y = avg_lifeExp, color = as.factor(cont))) +
+  geom_point() +
+  geom_smooth() +
+  theme_classic() +
+  labs(x = "Year",
+       y = "Average life expectancy, in years of age",
+       color = "Continent (factored)",
+       title = "Gapminder: life expectancy trends of late 20th century, by continent")
+```
+
+And it is, wonderfully, that simple! In practice, it's often more convenient to just have categorical variables as strings so that we aren't left with numbers in the legend as seen above. We can address this with the `forcats` package included in the tidyverse library with factor levels and labels.
+
+```{r factors labels, message=F, warning=F}
+#In plain words, replace the column `cont` in the data dataframe with a factored vector made from `cont` and with the following labels.
+data_cont$cont <- factor(data_cont$cont, labels = c("Asia", "Europe", "Africa", "Americas", "Oceania"))
+
+#note that we don't use as.factor in this graph, it's already factored above!
+ggplot(data_cont %>% 
+         group_by(year, cont) %>%
+         summarise(avg_lifeExp = mean(lifeExp, na.rm = T)),
+       aes(x = year, y = avg_lifeExp, color = cont)) +
+  geom_point() +
+  geom_smooth() +
+  theme_classic() +
+  labs(x = "Year",
+       y = "Average life expectancy, in years of age",
+       color = "Continent (factored & labeled)",
+       title = "Gapminder: life expectancy trends of late 20th century, by continent")
+```
+
+What if we wanted to reorder the legend such that it matched the generally ordinal positions of the life expectancy data (Oceania being first and Africa being last)? It's a small detail but one that can improve legibility. We can achieve this by specifying levels when factoring a variable.
+
+```{r factors levels, message=F, warning=F}
+data_cont2 <- left_join(x = data, y = continent_scale, by = "continent")
+
+data_cont2$cont <- factor(data_cont2$cont, labels = c("Asia", "Europe", "Africa", "Americas", "Oceania"))
+
+data_cont2$cont <- fct_relevel(data_cont2$cont, c("Oceania", "Europe", "Americas", "Asia", "Africa"))
+
+#note that we don't use as.factor in this graph, it's already factored for us!
+ggplot(data_cont2 %>% 
+         group_by(year, cont) %>%
+         summarise(avg_lifeExp = mean(lifeExp, na.rm = T)),
+       aes(x = year, y = avg_lifeExp, color = cont)) +
+  geom_point() +
+  geom_smooth() +
+  theme_classic() +
+  labs(x = "Year",
+       y = "Average life expectancy, in years of age",
+       color = "Continent (factored, labeled, & releveled)",
+       title = "Gapminder: life expectancy trends of late 20th century, by continent")
+```
+## Exercises
+
+Now let's bring it all together! In this section, we will use grouping/summarizing, pivoting, joining, and factoring to create different types of plots that take a look at education expenditures and life expectation, stratified by continent.
+
+```{r exercise data prep, echo = F, warning=F, message=F}
+#Just run this
+
+pt1 <- inner['country']
+
+pt1['variable'] <- "lifeExp"
+pt1['value'] <- inner['lifeExp']
+
+pt2 <- inner['country']
+
+pt2['variable'] <- "edu_exp"
+pt2['value'] <- inner['edu_exp']
+
+exercise <- rbind(pt1, pt2) %>%
+  rename("country_name" = "country")
+
+cont <- inner['country']
+                   
+cont['continent'] <- dplyr::recode(inner$continent, "Africa" = 1, "Americas" = 2, "Asia" = 3, "Europe" = 4, "Oceania" = 5)
+
+view(exercise)
+view(cont)
+```
+
+Take a moment to examine the dataframe `exercise` that is given. It is a longer dataset that has the following variables:
+
+- County Name
+- Variable (describes if the following value field describes life expectancy or education expenditures)
+- Value (either life expectancy in years or education expenditures as % of a country's GDP)
+
+A second dataset `cont` describes the continent that each country belongs to through these two fields:
+
+- County
+- Continent (as numbers, where 1-5 equates to (Africa, Americas, Asia, Europe, and Oceania))
+
+We want to turn these into a dataset with such a format that will let us create a scatterplot describing the relationship between education expenditures and life expectancy, categorized by continent. See an example below: 
+
+![Example exercise graph](data/images/02_exercise_example.png)
+Given what we know about these datasets, here is an outline of data cleaning steps you can follow the prepare the dataset for visualization.
+
+- Group by and summarize by country and variable so that there is only one aggregate value for each country/variable pair (this is remnant of having a longer dataset with multiple years of data!)
+- Pivot `exercise` to a wider format such that there is a separate variable for both `lifeExp` and `edu_exp`.
+- Join the `exercise` and `cont` dataset by country name, noting that there are two different column names for the same data (this will take a rename or specifying the columns in the join call)
+- Factor the `continent` field such that there are the correct continent strings associated with each numeric value.
+
+Name your final dataset `exercise_data`. Its column names should be the following: 
+
+- country_name OR country
+- edu_exp
+- life_Exp
+- continent
+
+```{r exercise answer, warning=F, message=F}
+#Group by and summarize dataset so that there is one observation for each country and variable pair
+
+exercise <- exercise %>%
+  group_by(country_name, variable) %>%
+  summarise(value = mean(value, na.rm =T))
+
+#Pivot exercise wider, taking column names from "variable" and values from "value"
+exercise <- exercise %>%
+  pivot_wider(names_from = "variable", values_from = "value")
+
+#Join dataset by country name
+exercise_data <- left_join(x = exercise, y = cont, by = c("country_name" = "country"))
+
+#Factor continent field
+exercise_data$continent <- factor(exercise_data$continent, labels = c("Asia", "Europe", "Africa", "Americas", "Oceania"))
+
+```
+
+You can just run the code cell, which should run well if all necessary data cleaning steps were taken.
+
+```{r exercise graph, warning=F, message=F}
+#Just run this
+ggplot(data = exercise_data, aes(x = edu_exp, y = lifeExp, color = continent)) +
+  geom_jitter() +
+  labs(color = "Continent",
+       x = "% of GDP spent on education",
+       y = "Life expectancy, in years")
+```
+
+And that brings us to the end of the transformation module! Congrats! You can knit this module for future reference or continue exploring with your newly reviewed/minted data transformation skills.
