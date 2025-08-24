@@ -43,14 +43,34 @@ here::dr_here()  # should print a path ending in .../PHW251B
 
 ## `here` Package
 
-This is the perfect segway into the `here` package. `here` provides you with a safe starting point for paths - the **project root**. This means that you can open up your project on `DataHub` or any other machine and all filepaths are going to be contained (Instead of fragile absolute paths or setwd(), you write)
+This is the perfect segway into the `here` package. `here` provides you with a safe starting point for paths - the **project root**. This means that you can open up your project on `DataHub` or any other machine and all file paths are going to work without refactoring your code!
+
+**NOTE** - As you proceed throughout course, you are going to notice that the file paths for reading in files are slightly different from the paths that you see in some of the video recorded modules. This is intentional! We removed the absolute paths from the R materials in this course to opt for a project centered relative path approach using `here` which is industry standard because of its stability across different computing environments!
 
 ```{r}
 # Load `here`
 library(here)
+library(tidyverse)
 
 # Eg - of how to read in data with `here`
-data = readr::read_csv(here::here("week_1", "data", "asthma.csv"))
+data = read_csv(here("week_1", "data", "hospitals.csv"))
+```
+
+# `janitor` package
+
+Since `R` is a case-sensitive language, it is best practice to convert column names into "snake_case" format. This `clean_names` function from the `janitor` package does just that! It automatically lower-cases names, converts spaces/hyphens/punctuation to underscores, removes/normalizes special characters (e.g., accents), collapses multiple separators, trims leading/trailing underscores, and guarantees uniqueness by appending numeric suffixes if needed. 
+
+**NOTE** - As with the `here` package, we have also introduced the `janitor` package into the `R Markdown` files that you are going to use for this course. Essentially, we replaced this complicated `tolower(gsub("\\.+", "_", make.names(names(df), unique = TRUE)))` code with `clean_names` throughout the course because it is an industry standard package that we wanted you to learn and to simplify the code where we thought was appropriate :)
+
+```{r}
+# Load `here`
+library(janitor)
+
+# Eg - of how to read in data with `here` & pipe it through `clean_names`
+data = read_csv(here("week_1", "data", "hospitals.csv")) %>% clean_names()
+
+# Output column names
+names(data)
 ```
 
 --- 
@@ -270,3 +290,12 @@ knitr::include_graphics(here(week, "images",  "01_appearance.png"))
 ```  
 
 Click **Apply** to save all changes (If any appearance changes do not immediately take effect -> restart your `RStudio` session) 
+
+# 'janitor' package
+
+`clean_names` from the `janitor` package standardizes data-frame column names so they’re safe, consistent, and easy to work with. It lowercases names, converts spaces/hyphens/punctuation to underscores, removes/normalizes special characters (e.g., accents), collapses multiple separators, trims leading/trailing underscores, and guarantees uniqueness by appending numeric suffixes if needed. You can also choose a naming style (e.g., "snake" [default], "lower_camel", "upper_camel", "screaming_snake"). It works on data.frames/tibbles (and there’s `make_clean_names` for cleaning a character vector of names).
+
+```{r}
+
+```
+
