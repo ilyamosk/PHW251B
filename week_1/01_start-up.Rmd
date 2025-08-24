@@ -24,16 +24,14 @@ Each module, exercise, and assignment is going to be rooted relative to the `wee
 ## Hardcoding
 
 ```{r}
-# setwd("~/Berkeley/Lecturer/uc-berkeley-data-viz/week_1")
-
-# 1) Activate the repo root as the current project (edit the path if needed)
-usethis::proj_activate("~/PHW251B")
-
 # 2) Create the RStudio project file in that folder
 usethis::use_rstudio()          # creates PHW251B.Rproj at PHW251B/
 
 # 3) Add sensible git ignores for RStudio cruft
 usethis::git_vaccinate()
+
+usethis::proj_get()                              # should print ".../PHW251B"
+list.files(usethis::proj_get(), pattern="\\.Rproj$")
 ```
 
 ## From Files Pane
