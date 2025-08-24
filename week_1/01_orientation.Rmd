@@ -290,12 +290,3 @@ knitr::include_graphics(here(week, "images",  "01_appearance.png"))
 ```  
 
 Click **Apply** to save all changes (If any appearance changes do not immediately take effect -> restart your `RStudio` session) 
-
-# 'janitor' package
-
-`clean_names` from the `janitor` package standardizes data-frame column names so they’re safe, consistent, and easy to work with. It lowercases names, converts spaces/hyphens/punctuation to underscores, removes/normalizes special characters (e.g., accents), collapses multiple separators, trims leading/trailing underscores, and guarantees uniqueness by appending numeric suffixes if needed. You can also choose a naming style (e.g., "snake" [default], "lower_camel", "upper_camel", "screaming_snake"). It works on data.frames/tibbles (and there’s `make_clean_names` for cleaning a character vector of names).
-
-```{r}
-
-```
-
