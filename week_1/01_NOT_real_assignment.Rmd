@@ -1,0 +1,17 @@
+---
+title: 'NOT Real Assignment'
+subtitle: 'PHW251B: Data Visualization for Public Health'
+author: 'Ilya Moskalenko'
+params:
+  week: "week_1"
+output:
+  html_document:
+    df_print: paged
+---
+
+# NOT Real Assignment! 
+
+This is a fake assignment to just show you the process for saving a copy of your Rmd files for `exercises` and `assignments`.
+
+When you begin to work on `exercises` and `assignments` you *must* save a copy of with a suffix of your name. Here is a sample of the pattern eg `01_NOT_real_assignment.Rmd` - > `01_NOT_real_assignment_ilya_moskalenko.Rmd`. **This is very important!** This is going to protect your work from being overwritten if we push any changes to the course & also assist us with identifying your work!
+

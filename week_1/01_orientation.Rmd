@@ -19,6 +19,10 @@ Welcome to **PHW251B**! The purpose of this module is to help you get your `RStu
 
 The R related materials for **PHW251B** are hosted on the `DataHub` which is an open-source,Í cloud-based computing platform that lets you run RStudio right in your web browser. A benefit of using `DataHub` is that you and your fellow student colleagues are going to have access to the same computational resources, regardless of any differences in local machines/computers. Additionally, the `Rmarkdown` files for modules, exercises, assignments, and data are located in the `week_*` folders. Furthermore, we already pre-installed each of the open source libraries/packages into the **PHW251B** instance of `DataHub` so you already have the tools that you need for the course at your disposal. 
 
+# Saving a copy of your Rmd files for `exercises` and `assignments`
+
+When you begin to work on `exercises` and `assignments` you *must* save a copy of with a suffix of your name. Here is a sample of the pattern eg `01_NOT_real_assignment.Rmd` - > `01_NOT_real_assignment_ilya_moskalenko.Rmd`. **This is very important!** This is going to protect your work from being overwritten if we push any changes to the course & also assist us with identifying your work!
+
 # Working with R Projects & `here`
 
 In **PHW251B** we read data and images from week-specific folders (e.g., week_1/data, week_1/images). To keep everyone’s code working on `DataHub`, we pair the use of an R Project and the `here` package.
