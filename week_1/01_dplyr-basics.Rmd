@@ -11,7 +11,7 @@ output:
     df_print: paged
 ---
 
-**A NOTE FROM THE INSTRUCTORS** - Parts of this `RMarkdown` file have been updated from the accompanying video to elevate your learning experience. Essentially, we replaced BaseR functions with the available equivalent functions from the `tidyverse` because it is best practice in industry. Some reasons for these best practices include better support for `tidyverse` workflows with the `%>%` operator, is incredibly well documented, and runs faster when working with big data :)
+**A NOTE FROM THE INSTRUCTORS** - Parts of this `RMarkdown` file have been updated from the accompanying video to elevate your learning experience as mentioned in `Module 0: Orientation`. Essentially, we replaced BaseR functions with the available equivalent functions from the `tidyverse` because it is best practice in industry. Some reasons for these best practices include better support for `tidyverse` workflows with the `%>%` operator, is incredibly well documented, and runs faster when working with big data. Therefore, the code that you may see in the recording may be slightly different than the code in the `R Markdown` file, however it accomplishes the same thing with better methodologies :)
 
 # Part 0
 
@@ -227,7 +227,7 @@ One of the more powerful tools in the `dplyr/tidyverse` is how we can chain toge
 
 (Remember, you can see more documentation for a function by typing in `?function()` in the console)
 
-```{r ifelse}
+```{r if_else}
 # Help page for dplyr's type-stable conditional
 ?dplyr::if_else
 
