@@ -1,5 +1,5 @@
 ---
-title: 'Module 1: R & dplyr basics'
+title: 'Module: R & dplyr basics'
 subtitle: 'PHW251B: Data Visualization for Public Health'
 author: 
   - "Ilya Moskalenko"
@@ -11,7 +11,7 @@ output:
     df_print: paged
 ---
 
-**A NOTE FROM THE INSTRUCTORS** - Parts of this `RMarkdown` file have been updated from the accompanying video to elevate your learning experience as mentioned in `Module 0: Orientation`. Essentially, we replaced BaseR functions with the available equivalent functions from the `tidyverse` because it is best practice in industry. Some reasons for these best practices include better support for `tidyverse` workflows with the `%>%` operator, is incredibly well documented, and runs faster when working with big data. Therefore, the code that you may see in the recording may be slightly different than the code in the `R Markdown` file, however it accomplishes the same thing with better methodologies :)
+**A NOTE FROM THE INSTRUCTORS** - It is highly recommended that you watch `Module 0: Orientation` in Week 1 because parts of this `RMarkdown` file have been updated from the accompanying video to elevate your learning experience. Essentially, we replaced BaseR functions with the equivalent functions from the `tidyverse`, added the use of `Rprojects` and the `here` package for referencing and importing data, and the introduced the `clean_names` function from the `janitor` package. We did this because we wanted to better align our course with industry best practices for both efficiency and robustness. Therefore, the code that you may see in the recording may be slightly different than the code in the `R Markdown` file, however it accomplishes the same thing with better methodologies :)
 
 # Part 0
 
@@ -25,7 +25,7 @@ knitr::opts_chunk$set(echo = TRUE, tidy.opts = list(width.cutoff = 85))
 
 ## Introduction
 
-This `R Markdown` (or `.Rmd`) is a brief review of R programming basics using the `dplyr` (and greater `tidyverse` collection) library for data wrangling and cleaning, and is the first of a series of review modules for `PHW251B: Data Visualization for Public Health`. Students are assumed to have completed some coursework in R, including but not limited to `PH142` and/or `PHW251`. If any wording or concepts are less familiar, please feel free to review said courses. 
+This `R Markdown` (or `.Rmd`) is a brief review of R programming basics using the `dplyr` (and greater `tidyverse` collection) library for data wrangling and cleaning, and is the first of a series of review modules for `PHW251B: Data Visualization for Public Health`. Students are assumed to have completed some coursework in R, including but not limited to `PH142` and/or `PHW251`. If any wording or concepts are less familiar, please feel free to review said courses. It is highly recommended that you watch 
 
 ## Objectives
 
@@ -112,7 +112,9 @@ In the code chunk below, we will be reading in data from the California Open Dat
 
 We will use the `read_csv` function from `tidyverse's` `readr` package to read in the `asthma.csv` dataset. 
 
-`clean_names` from the `janitor` package standardizes data-frame column names so they’re safe, consistent, and easy to work with. It lowercases names, converts spaces/hyphens/punctuation to underscores, removes/normalizes special characters (e.g., accents), collapses multiple separators, trims leading/trailing underscores, and guarantees uniqueness by appending numeric suffixes if needed. You can also choose a naming style (e.g., "snake" [default], "lower_camel", "upper_camel", "screaming_snake"). It works on data.frames/tibbles (and there’s `make_clean_names` for cleaning a character vector of names).
+[**NOTE** - this part of the module has been updated from the video in the course. We essentially replaced this complicated `rename_with(~ tolower(gsub(" ","_", .x, fixed=TRUE)))` code with `clean_names`. We also removed the part of the code where you read in data directly from a website because that link was no longer available and are providing you with just static copy of the `asthma.csv` dataset instead.]
+
+`clean_names` from the `janitor` package standardizes data-frame column names so they’re safe, consistent, and easy to work with. It lowercases names, converts spaces/hyphens/punctuation to underscores, removes/normalizes special characters (e.g., accents), collapses multiple separators, trims leading/trailing underscores, and guarantees uniqueness by appending numeric suffixes if needed.
 
 ```{r reading in files}
 # Load 
@@ -129,16 +131,15 @@ asthma_raw <- read_csv(here(week, "data", "asthma.csv"))
 names(asthma_raw)
 
 # Import same file and pipe it through clean_names() [This is a best practice]
-asthma <- read_csv(here(week, "data", "asthma.csv")) %>% clean_names()
+asthma <- read_csv(here(week, "data", "asthma.csv")) %>% clean_names() # Using `clean_names` instead of `rename_with(~ tolower(gsub(" ","_", .x, fixed=TRUE)))`
 
 # Output column names cleaned dataset
 names(asthma)
 ```
 
+[**NOTE** - this part of the module has also been slightly updated from the video in the course. We essentially got rid of the dialogue about absolute vs relative path because for this course everything is relative to the **R Project** - `PHW251B.Rproj` via the `here` function]
 
-Reading in files is simple and just requires some knowledge of the location of your folder. Note that the dataset location above is in relation to the location of your .rmd file; the .rmd file is in the same folder that includes "data", so you don't need to specify any folder that came before. This is an example of a **relative path**, whereas specifying the entire detailed file location from your computer's hard drive would be an **absolute path**.  
-
-A useful practice when you're familiarizing yourself with reading in files is actually going to the file in the RStudio "Files" tab, clicking on the dataset, and selecting "Import Dataset". It'll give you a window that has the **absolute path** at the top under File/URL and a code preview with the **relative path**. 
+Reading in files is simple and just requires some knowledge of the location of your folder. Note that the dataset location above is in relation to the location of your **R Project** - `PHW251B.Rproj` which we specify with `here` as we discussed in `Module 0: Orientation`. Then we just point to the `data` folder and then to the `asthma.csv` file itself.
 
 ```{r preview files}
 # Preview dataset
@@ -244,7 +245,7 @@ One of the more powerful tools in the `dplyr/tidyverse` is how we can chain toge
 data <- data %>%
   mutate(
     # If a value in `population` is NaN, replace it with a numeric NA; otherwise keep the original value
-    population = if_else(is.nan(population), NA_real_, population)
+    population = if_else(is.nan(population), true = NA_real_, false = population)
   )
 
 # Quick check: after the replacement, how many NaNs are left? (Should be 0)
@@ -254,7 +255,7 @@ data <- data %>%
   mutate(
     # Create a beginner-friendly missingness flag
     # In plain words: if `population` is NA, mark "Yes"; if not, mark "No"
-    missing = if_else(is.na(population), "Yes", "No")
+    missing = if_else(is.na(population), true = "Yes", false = "No")
   )
 ```
 
