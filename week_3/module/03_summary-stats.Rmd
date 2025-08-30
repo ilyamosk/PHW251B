@@ -1,0 +1,504 @@
+---
+title: 'Module: Summary Statistics & Data Extraction'
+subtitle: 'PHW251B: Data Visualization for Public Health'
+author: 
+  - "Ilya Moskalenko"
+  - "Andrew Nguyen"
+params:
+  week: "week_3"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, echo = FALSE, warning=F, message=F}
+# Loading libraries
+library(tidyverse)
+library(formatR)
+library(here)
+library(janitor)
+
+# Global chunk settings
+knitr::opts_chunk$set(echo = TRUE, tidy = TRUE, tidy.opts = list(width.cutoff = 85))
+
+# Pulling in `week: "week_3"` paramater from YAML
+week <- params$week
+```
+
+# Part 1
+
+## Introduction
+
+An important part of data wrangling and the exploratory data analysis (EDA) process is being able to derive meaningful and measures from your data -- these are commonly known as summary statistics, where we find insight into our data by examining continuous data for its center and spread and categorical/nominal data for its frequencies and occurrence. 
+
+This R Markdown file will go over common tools to investigate and derive summary statistics from datasets with EDA and data visualization in mind. We will also explore ways to extract data from string and date data.
+
+Resources in alignment with this review module include:
+
+- PH142: Lecture 4 (Numerically Summarizing Spread and Central Tendency)
+- PHW251: Week 6
+- R4DS: Chapters 5 & 7
+
+This module's dataset is from the National Institute of Diabetes and Digestive and Kidney Diseases and is hosted by Kaggle: ***<https://www.kaggle.com/datasets/mathchi/diabetes-data-set?resource=download>***
+
+It describes patients who were assigned female at birth, at least 21 years of age, and from a Pima tribe. These variables of physiological data were collected and collated with the intention of developing health models to better understand risk of diabetes based on these diagnostic measures:
+
+- `Pregnancies`: Number of times pregnant
+- `Glucose`: Plasma glucose concentration a 2 hours in an oral glucose tolerance test
+- `BloodPressure`: Diastolic blood pressure (mm Hg)
+- `SkinThickness`: Triceps skin fold thickness (mm)
+- `Insulin`: 2-Hour serum insulin (mu U/ml)
+- `BMI`: Body mass index (weight in kg/(height in m)^2)
+- `DiabetesPedigreeFunction`: Diabetes pedigree function
+- `Age`: Age (years)
+- `Outcome`: Class variable (0 or 1)
+
+For our date and strings section, we will be utilizing a publicly-available dataset describing case detection data from monkeypox patients as compiled by Global Health Council (***<https://globalhealth.org/>***) and sourced from Kaggle: ***<https://www.kaggle.com/datasets/deepcontractor/monkeypox-dataset-daily-updated?select=Worldwide_Case_Detection_Timeline.csv>***
+
+The dataset describes the date of case detection, geography, sex and age information of the patient, symptoms, and binary indicators for hospitalization, isolation, and having a history of travel prior to disease.
+
+Additionally, we will look at a dataset describing health-related tweets from the British Broadcasting Company in 2015 using the Twitter API. It is sourced from Kaggle: ***<https://www.kaggle.com/datasets/prabhavsingh/health-related-tweets>***
+
+## Objectives
+
+Today, we will use the aforementioned datasets to demonstrate different methods in R to describe spread and frequency of different types of variables, as well as other useful methods for data extraction. 
+
+- Summary statistics: `n`, `sum`, `mean`, `median`, `sd`, `IQR`, `quantile`, `na.rm`, `round`, frequency and frequency tables
+- Measures of position: `first`, `nth`, `last`
+-	Measures of missingness, finding missingness: `is.na`
+- String methods for data extraction & creation using `stringr`
+-	Date methods using `lubridate`
+
+## Basic functions for describing your dataset
+
+- `nrow`: gives the number of rows in a dataframe 
+- `ncol`: gives the number of columns in a dataframe
+- `names`: gives the column/variable names in a dataframe
+- `str`: a handy function that will give you both a preview of columns and data types for each column
+
+```{r desc df, warning=F, message=F}
+# Load diabetes dataset to a dataframe called diabetes
+diabetes <- read_csv(here(week, "data", "diabetes.csv")) %>% # Using `here` to root to `PHW251B` R project
+  clean_names() # Using `clean_names` instead of `rename_with(~ tolower(gsub(" ","_", .x, fixed=TRUE)))`
+
+# How many rows/observations does this dataset have?  
+nrow(diabetes)
+
+# How many columns does this dataset have?
+ncol(diabetes)
+
+# What are the names of said columns?
+names(diabetes)
+
+# Take a peek at the structure and contents of your dataframe
+str(diabetes)
+```
+
+With the ability to call these functions on any vector-based object in R, (a vector-based object is made up of vectors, or single variables with observations; a dataframe is many vectors put together, or many variables with observations put together) you can imagine the flexibility to retrieve conditional frequencies with both the `filter` methods we reviewed in Module 1 and these descriptive functions for the dataset.
+
+```{r desc df 2, warning=F, message=F}
+
+# Calculate the frequency of observations with outcome == 1 in diabetes dataframe
+nrow(diabetes %>% filter(outcome == 1)) / nrow(diabetes) * 100
+
+# 34.9% of the dataset have the outcome == 1
+```
+
+For an exercise, try calculating the frequency of observations in the diabetes dataframe that that a `BMI` of less than 30.0 and have `outcome` == 1.
+
+```{r desc df 3, warning=F, message=F}
+nrow(diabetes %>% filter(bmi < 30.0 & outcome == 1)) / nrow(diabetes) * 100
+```
+
+# Part 2
+
+## Functions for summary stats
+
+We'll start with some basic summarizing methods for quantitative continuous variables. Most can be used with ungrouped data, but all of these can be used with grouped data (noted below).
+
+- `n`: gives the number of observations in a group (after a `group_by` operation, doesn't work with ungrouped data, which you can use `nrow` for)
+- `sum`: calculates the sum of all values that you include in its argument (works for vectors, ungrouped data, and grouped data)
+- `mean`: calculates the average of all values included in its argument (works for vectors, ungrouped data, and grouped data)
+- `median`: calculates the median of all values included in its argument (works for vectors, ungrouped data, and grouped data)
+- `sd`: calculates the standard deviation of a given continuous variable/column (works for vectors, ungrouped data, and grouped data)
+- `IQR`: calculates the interquartile range for a given continuous variable/column (works for vectors, ungrouped data, and grouped data)
+- `quantile`: one can use this to derive **percentiles** for a given continuous variable and an argument for a **percentile** (works for vectors, ungrouped data, and grouped data). Of course, you can also calculate any quantile you would like (quartiles would simply have arguments of 0.25, 0.5, 0.75, etc.).
+- `round`: one can use this function to round any continuous variable or object (works for vectors, ungrouped data, and grouped data)
+
+
+Last but not least, is the very important parameter (not function) `na.rm`. In plain words, it determines whether NA values should be removed before calculations are made or not. If there are an NAs in a variable/column/vector when we perform a summarizing function on it, it will result in a NA final value. Therefore, we often set `na.rm == T` to remove any NAs from values being operated on.
+
+To start, we'll construct a demonstration dataframe that is grouped by outcome and includes many summary statistics found in descriptive tables:
+
+- Number of observations in each group
+- Average age using `sum` and `n`
+- Average age using `mean`
+- Average BMI using `mean`
+- Average BMI rounded to two decimal points using `mean` and `round`
+- Median BMI using `median`
+- Standard deviation of BMI using `sd`
+- Interquartile range of BMI using `IQR`
+- 99th percentile of BMI using `quantile`
+
+```{r sum stats, warning=F, message=F}
+# Demonstration of several functions mentioned above
+diabetes %>%
+  group_by(outcome) %>%
+  summarise(group_size = n(),
+            age_avg_1 = sum(age)/n(),
+            age_avg_2 = mean(age, na.rm = T),
+            bmi_mean = mean(bmi, na.rm = T),
+            bmi_mean_rounded = round(mean(bmi, na.rm = T), digits = 2),
+            bmi_median = median(bmi, na.rm = T),
+            bmi_sd = sd(bmi, na.rm = T),
+            bmi_iqr = IQR(bmi, na.rm = T),
+            bmi_0.99 = quantile(bmi, 0.99))
+```
+
+As mentioned earlier, these functions/methods don't need to be used with grouped data -- we can apply it to simple vectors, variables, and matrices (not covered in depth in this course, but good to know for other applications, especially in multivariable regression and machine learning).
+
+```{r sum stats 2, warning=F, message=F}
+# Create a vector (synonymous to a single column or variable, standing alone) of age from diabetes dataset
+pregnancies_vector <- as.vector(diabetes$pregnancies)
+
+# Note that it doesn't show up as a dataframe under "Data" in our Environment, but under "Values"
+# Looking at the structure will look different from what a dataframe does, as does head()!
+str(pregnancies_vector)
+head(pregnancies_vector)
+
+# However, summary functions will work as expected if this were simply a column in a larger dataframe.
+mean(pregnancies_vector)
+median(pregnancies_vector)
+sd(pregnancies_vector)
+IQR(pregnancies_vector)
+quantile(pregnancies_vector, 0.8)
+sum(pregnancies_vector)
+```
+
+Great! Now it's your turn to try! Using these functions and methods we reviewed in earlier modules, create summary statistics for **insulin levels** of patients grouped by quartiles (4 quantiles) of **pregnancies** and rounded to **two decimal places** when applicable. You can name the final summary dataframe _ex3_. To help, here's a suggested analysis plan:
+
+- Create quartiles of pregnancies using `quantile` and a grouping variable (`ifelse` or `case_when` may be helpful)
+- Group by quartiles
+- Create summary statistics
+
+```{r sum stats 3, warning=F, message=F}
+ex3 <- diabetes %>%
+  mutate(preg_quart = case_when(pregnancies <= quantile(pregnancies, 0.25) ~ 1,
+                                pregnancies <= quantile(pregnancies, 0.5) ~ 2,
+                                pregnancies <= quantile(pregnancies, 0.75) ~ 3,
+                                pregnancies > quantile(pregnancies, 0.75) ~ 4)) %>%
+  group_by(preg_quart) %>%
+  summarise(group_size = n(),
+            insulin_mean = round(mean(insulin, na.rm = T), digits = 2),
+            insulin_median = median(insulin, na.rm = T),
+            bmi_sd = round(sd(insulin, na.rm = T), digits = 2), 
+            bmi_iqr = IQR(insulin, na.rm = T),
+            bmi_0.9 = quantile(insulin, 0.9))
+
+ex3
+```
+
+# Part 3
+
+## Missingness
+
+We briefly touched on `na.rm`, which is a necessary component of summary functions, but what if we wanted to investigate missingness itself? We can use the function `is.na`, which returns `True` or `False` if a value in the data object is NA or not. There are other variations like `is.nan` that serve the same purpose for different data (**nan** being "not a number" or an undefined number).
+
+To explore how we can summarize missingness, let's pull in a dataset that is identical to the diabetes dataset but with some missing values created at random throughout.
+
+```{r missingness, warning=F, message=F}
+# Import diabetes dataset with missing values
+diabetes_missing <- read_csv(here(week, "data", "diabetes_missing.csv"))
+
+# If we call is.na on the entire dataset, it'll try to give us a dataframe with each value replaced with TRUE or FALSE depending on if it's NA or not. This is a bit cumbersome and hard to review
+head(is.na(diabetes_missing))
+
+# We can employ the sum() function as well to sum all TRUE values (which are quantitatively treated as 1s) to give us the total number of missing values in the entire dataset
+sum(is.na(diabetes_missing))
+
+# We can extend this by using the nrow() and ncol() function to get the frequency of missing values in the dataset. Note that we need to multiply them together to get the total number of values (observations x columns), instead of just the number of observations
+
+sum(is.na(diabetes_missing)) / (nrow(diabetes_missing)*ncol(diabetes_missing))
+
+# 4.8% of the dataset seems to be missing!
+
+# What if we wanted to just look at the missingness of one column?
+sum(is.na(diabetes_missing$glucose))
+sum(is.na(diabetes_missing$glucose)) / nrow(diabetes_missing)
+
+# What if we wanted to look at missingness of all columns, separately? You don't need to know sapply() in depth, but in plain words, it is applying sum(is.na()) on the entire diabetes_missing dataset by column/variable. We can also extend the earlier methods to percentages.
+sapply(diabetes_missing, function(x) sum(is.na(x)))
+
+sapply(diabetes_missing, function(x) sum(is.na(x)) / nrow(diabetes_missing))
+
+# We can also include missingness as a summary statistic!
+diabetes_missing %>%
+  group_by(outcome) %>%
+  summarise(missing_ins = sum(is.na(insulin)),
+            missing_ins_freq = (sum(is.na(insulin))/n())*100,
+            mean_ins_narm = mean(insulin, na.rm = T),
+            mean_ins = mean(insulin))
+
+# Note that we called mean twice, one with na.rm = T and one without -- the one without computes to NA because of the presence of NAs in the calculations! We also see that across the two groups of outcomes, there's more missingness of the insulin variable in those who had outcome == 1. Epidemiologically speaking, that might be an issue of exchangeability to both present as an EDA finding and an issue to keep exploring in your analysis.
+```
+
+# Part 4
+
+## String methods
+
+Not all of our data will be quantitative continuous data. Important findings can be encoded in qualitative text, which we can analyze as categorical or binary variables as either simple frequencies or indicator variables for regression models and the like. In this section, we'll explore some powerful tools in the `stringr` package (a part of the `tidyverse` library) that allows us to transform text data into a wide variety of operational data. As mentioned before, we'll be using a monkeypox case identification dataset sourced GHC and hosted by Kaggle.
+
+Here's the stringr cheatsheet: ***<https://github.com/rstudio/cheatsheets/blob/main/strings.pdf>***
+
+```{r strings, warning=F, message=F}
+?stringr
+
+# Import monkeypox dataset
+monkeypox <- read_csv(here(week, "data", "monkeypox.csv")) %>%
+  clean_names() # Using `clean_names` instead of `rename_with(~ tolower(gsub(" ","_", .x, fixed=TRUE)))`
+
+# Let's call a whole host of summary functions that can help us get a sense of our dataset
+head(monkeypox)
+str(monkeypox)
+nrow(monkeypox)
+names(monkeypox)
+```
+
+If we take a closer look at the symptoms variable, we can see that there are some entries where are more than one symptoms listed, where each are separated by a comma. 
+
+```{r strings 2, warning=F, message=F}
+# Call unique values from symptoms variable in monkeypox dataset
+unique(monkeypox$symptoms)
+
+# Let's make a simple frequency table of all of the values in the symptoms variable in the dataset
+table(monkeypox$symptoms) / nrow(monkeypox) 
+# Let's also take a look of what proportion of dataset simply lacks information on symptoms, just out of curiosity
+nrow(monkeypox %>% filter(is.na(symptoms))) / nrow(monkeypox)
+```
+One problem we face is that there can be multiple symptoms captured in one text string, which may be problematic when trying to use this data for modelling -- the principle of tidy data is violated (more than one variable worth of information captured in one). As a solution, we can use string methods to detect and extract each of the symptoms and assign them to binary indicator variables (also known as dummy variables) to make the data more legible and easier to work with for both visualization and further analysis.
+
+Here are some useful functions (out of _many_, so we highly encourage you to explore the cheatsheet and documentation for all possibilities with stringr):
+
+- `str_detect`: Detect the presence of a pattern match in a string
+- `str_count`: Count the number of matches in a string
+- `str_subset`: Return only the strings that contain a pattern match
+- `str_replace`: Replace the first matched pattern in each string with replacement string
+
+There's a few `stringr` functions that can help us, but first let's build off of what we know with `ifelse` and use the function `str_detect`, which returns `True`/`False` given a value contains a string or pattern that we specify.
+
+Let's first create an indicator variable for whether a patient experienced **fever** as a symptom, marking `1` for `Yes` and `0` for `No`. We can assign this to a variable called _fever_.
+
+```{r strings 3, warning=F, message=F}
+# Call documentation
+?str_detect
+
+# In plain words: to the same monkeypox dataset, we add a new variable that assigns 1 if the symptoms variable has the string "fever" in it and 0 if not.
+monkeypox_sx <- monkeypox %>%
+  mutate(fever = if_else(str_detect(string = symptoms, pattern = "fever"), true = 1, false = 0)) 
+
+# Of those who did have recorded symptoms, how many had a fever? Here we get the number of rows for those who had fever == 1, divided by all observations that had any non-NA value for the fever indicator variable (and by extension anyone who has reported symptoms)
+nrow(monkeypox_sx %>% filter(fever == 1)) / nrow(monkeypox_sx %>% filter(is.na(fever) == F))
+```
+
+That's great! You can play around to extract different symptoms and make indicator variables for each one. In truth, there are ways to better formalize this process such that you don't need to specify every single unique string and instead ask R to identify all unique strings, cycle through, and create indicator variables for each. This is a bit out of scope for this course (if you are curious, you can look up documentation for _"one-hot encoding in R"_), but in this next code chunk we'll go through extracting these unique strings so that we know all of the possible indicator variables we could create.
+
+```{r strings 4, warning=F, message=F}
+# Split each observation for the symptoms variable at commas
+monkeypox <- monkeypox %>%
+  mutate(symptoms_list = str_split(symptoms, ","))
+
+# Take a peek
+head(symptoms_list, 10)
+
+# Load `purrr` library, another `tidyverse` package
+library(purrr)
+
+# Convert the list of lists into one list using `flatten` from the `purrr` package
+symptoms_list <- purrr::flatten(symptoms_list)
+
+# Use string method to trim whitespace
+symptoms_list <- str_trim(symptoms_list)
+
+# Use string method to make all letters lowercase
+symptoms_list <- str_to_lower(symptoms_list)
+
+# Get unique values from final list/deduplicate
+unique(symptoms_list)
+
+```
+
+What if we wanted to create a variable in our dataset that indicates how many symptoms a patient had, if symptoms were reported? We can build off of the code above to count how many entries are in each list and assign it to a new variable called `symptoms_count`. For this, we employ the `lengths` function, which simply counts how many entries are in a list or similar object.
+
+```{r strings 5, warning=F, message=F}
+# Create a new variable that is the lengths of the symptoms variable once split by commas
+monkeypox_sx <- monkeypox %>%
+  mutate(symptoms_count = symptoms %>%
+           str_split(",") %>%
+           lengths())
+
+# Take a peek of 10 rows after filtering out NAs and selecting the two relevant columns
+head(monkeypox_sx %>% filter(is.na(symptoms) == F) %>% 
+       select(symptoms, symptoms_count), 10)
+```
+
+**Regular expressions (Regex)**
+
+To round out our sojourn to the string-verse, we'd like to introduce/review the extremely powerful tool known as **regular expressions** (or **regex**) which are a sequence of characters we can use to identify patterns within text. 
+
+For example, to capture **any** phone number, one could employ this regex:
+
+[0-9]{3}-[0-9]{3}-[0-9]{4}
+
+It reads: 3 x any digit between 0-9, a dash, 3 x any digit between 0-9, another dash, and 4 x any digit between 0-9. Of course, you could customize this to fit different types of phone numbers, area codes, etc. 
+
+You can imagine how useful these methods can be combined with `stringr` functions (**regex** patterns can be specified into the "pattern" argument of `stringr` functions). Below, we'll show a brief example with a dataset of health-related tweets from the British Broadcasting Company (BBC). The dataset details and metadata can be viewed here: ***<https://www.kaggle.com/datasets/prabhavsingh/health-related-tweets>***
+
+Regex and string methods are definitely not a primary focus of this course, but as data extraction is integral to data visualization, it is important to know that these tools exist for your usage. To learn more about regex and how to use it, take a look at these useful resources:
+
+- stringr cheatsheet (page 2): ***<https://github.com/rstudio/cheatsheets/blob/main/strings.pdf>***
+- TDS blogpost about regex: ***<https://towardsdatascience.com/novice-to-advanced-regex-in-nine-minutes-or-less-6af45a1df8c8>***
+- regex cheatsheet: ***<https://cheatography.com/davechild/cheat-sheets/regular-expressions/>***
+- regex playground: ***<https://regex101.com/>***
+- like wordle, but for regex: ***<https://alf.nu/RegexGolf>***
+
+```{r strings regex, warning=F, message=F}
+# Import text data and set column names
+bbc <- read_delim(here(week, "data", "bbc.txt"), 
+                  col_names = c("tweet_id", "datetime", "text"))
+
+# Take a look at the last 6 observations (tail is the opposite of head)
+tail(bbc)
+```
+
+First, let's take a look at a few string operations we can do with and without regex. Let's say we want to separate out the URL from each observation into a new column. We can do this **without** regex and just stringr methods by possibly splitting at the "http://" and taking all of the url after.
+
+```{r strings regex 2, warning=F, message=F}
+# There's a bit going on in this code, and sapply is out of scope for this course, but in plain words, we are first splitting the "text" variable into two strings -- one string between "http://" and one after. Then, we use sapply to select just the second string and assign it to a variable called "url". 
+bbc_url <- bbc %>%
+  mutate(url = c(sapply(str_split(text, 
+                                  pattern = "http://"), '[[', 2)))
+
+# Take a peek
+head(bbc_url %>% select(text, url))
+```
+
+Note that the above was done without regex -- our URL ends without the http://, which may be fine in this scenario but could be inconvenient for other instances. We can add it back in by using `str_c` (c for "concatenate") which you can explore in the stringr cheatsheet or documentation.
+
+Below, we'll take a look at how we can use regex for this problem.
+
+```{r strings regex 3, warning=F, message=F}
+# In plain words, we create a new variable url from the variable text that extracts the group that begins with http and any characters after -- ('.' matches any character and the '+' says to take up to an infinite number of characters)
+bbc_url <- bbc %>%
+  mutate(url = str_extract(text, 
+                           pattern = regex("(http.+)")))
+
+# Take a peek!
+head(bbc_url %>% select(text, url))
+```
+
+That's great! We got to avoid the admittedly abstract and messy usage of `sapply` to access a list of lists and instead could directly pull the entire URL. Regex is a powerful and necessary tool in that it both increases the flexibility of our existing toolset but also makes our code easier to read, understand, and maintain -- all hallmarks of good data wrangling.
+
+# Part 5
+
+## Date data with lubridate
+
+Last but not least, we'll use the same dataset and string methods to extract the date from the `datetime` field and then use the `lubridate` package to operationalize date data such that R can understand it! This is extremely useful in longitudinal analyses and data visualization of temporal data.
+
+```{r dates, warning=F, message=F}
+# Take a peek at the datetime variable -- we see that the month is always the second string of three character
+head(bbc$datetime)
+
+# In plain words: we search each string in datetime for a first group of any characters ('\w') in a group of three ('{3}') and then capture the second group of the same pattern (denoted by the parentheses). This returns two columns (the overall match and then the capture group), so we use [,2] to take the second match.
+bbc_dates <- bbc %>%
+  mutate(month = str_match(string = datetime, 
+                           pattern = regex("[\\w]{3} (\\w{3}) "))[,2])
+
+# Lets do the same for day 
+bbc_dates <- bbc_dates %>%
+  mutate(day = str_match(string = datetime, 
+                         pattern = regex("[\\d]{2} "))[,1])
+
+# Since all observations were from 2015, we can just mutate a static 2015 for a year variable. Optional to try on your own: try to use regex to capture the year from the datetime variable.
+
+# Note that below is base R syntax (not using pipes). You can use whichever syntax (base R or tidyverse) you are most comfortable with, but it is worth mentioning moments when base R is quicker/more legible. Here, in plain words: the 'year' variable in bbc_dates dataframe will be assigned "2015" across the entire dataframe.
+bbc_dates['year'] = "2015"
+
+# Lets take a look at the three fields we just made:
+head(bbc_dates %>% select(-c("tweet_id", "text")))
+```
+
+Looks good! So for what purpose did we separate these three date components? We can use a package called `lubridate` to turn this into a **Date** variable type, which is distinct from character and numeric data, and is treated as true dates in R.
+
+Here's a lubridate cheatsheet: ***<https://rawgit.com/rstudio/cheatsheets/main/lubridate.pdf>***
+
+```{r dates 2, warning=F, message=F}
+# Lets use one last stringr function to concatenate the three date variables we made into a mmmddyyyy format
+bbc_dates <- bbc_dates %>%
+  mutate(new_date = str_c(month, " ", day, year))
+
+# Then, we can use the `mdy` function from `lubridate` 
+bbc_dates <- bbc_dates %>%
+  mutate(new_date = mdy(new_date))
+
+# Lets take a peek! Notice the 'new_date' has a <date> data type!
+head(bbc_dates %>% select(datetime, month, 
+                          day, year, new_date))
+```
+
+There's a lot of cool things we can do with this new true date field! `Lubridate` offers many accessors to pull out information, as seen below:
+
+```{r dates 3, warning=F, message=F}
+# Get day of the week and epidemiological week for the first 6 rows of the dataset
+bbc_dates %>%
+  mutate(
+    day_of_week = lubridate::wday(new_date, label = TRUE),
+    epi_week    = lubridate::epiweek(new_date)
+  ) %>%
+  select(new_date, day_of_week, epi_week) %>%
+  head(6)
+
+# Let's create an indicator variable if the tweet is a video
+bbc_dates <- bbc_dates %>%
+  mutate(video = if_else(str_detect(text, pattern = "VIDEO:"), true = 1, false =0))
+
+# Using lubridate, let's make a week variable indicating what week of the year it is
+bbc_dates <- bbc_dates %>%
+  mutate(week = lubridate::week(new_date))
+
+# Using grouping and summarizing techniques we reviewed in the last module, we can group by week to find the number of videos per week and overall percent of tweets are videos in a given week. Note that we made a date field in the summarise function that takes the first date of each week group -- we would otherwise lose the date data, which is useful when plotting
+bbc_week <- bbc_dates %>%
+  group_by(week) %>%
+  summarise(date = min(new_date),
+            sum_video = sum(video, na.rm = T),
+            perc_video = (sum(video, na.rm = T)/n())*100)
+
+# We can now plot this longitudinally! R recognizes the datefield as a valid x variable and treats it accordingly as a temporal scale.
+
+ggplot(data = bbc_week, aes(x = date, y = perc_video)) +
+  geom_bar(stat = "identity") +
+  labs(x = "Date",
+       y = "Percent (%) of all tweets",
+       title = "Trends of video tweets as a percentage of all health-related tweets by week (BBC, 2015)")
+```
+That brings us to the end of the dates section, which like the strings section, is wide-reaching and can be explored further through documentation and practice. Here's a challenge problem to try for the curious:
+
+Extract the hh:mm:ss data from the datetime field in the `bbc` dataset using `stringr` and **regex**. Extract an hour field and use it to create a new aggregate dataset grouped by hour and aggregating the number of video tweets. The final aggregate dataframe should be similar to `bbc_week` but at the hourly level and for video tweets.
+
+```{r dates ex, warning=F, message=F}
+bbc_hour <- bbc_dates %>%
+  mutate(hms = str_match(string = datetime, 
+                         pattern = regex("(\\d{2}:\\d{2}:\\d{2})"))[,2],
+         new_date = lubridate::ymd_hms(str_c(new_date, hms)),
+         hour = lubridate::hour(new_date)) %>%
+  group_by(hour) %>%
+  summarise(sum_video = sum(video, na.rm = T),
+            perc_video = (sum(video, na.rm = T)/n())*100)
+
+ggplot(data = bbc_hour, aes(x = hour, y = perc_video)) +
+  geom_bar(stat = "identity") +
+  labs(x = "Hour of day",
+       y = "Percent (%) of all tweets",
+       title = "Hourly trends of video tweets as a percentage of all health-related tweets (BBC, 2015)")
+```
+
+Congrats! You have successfully completed the `Summary Statistics & Data Extraction` module! Feel free to keep exploring these methods or knit the document for your reference.

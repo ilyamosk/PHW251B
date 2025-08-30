@@ -1,0 +1,104 @@
+---
+title: 'Exercise 1 - Bar Charts'
+subtitle: 'PHW251B: Data Visualization for Public Health'
+author: "YOUR NAME HERE"
+date: "`r format(Sys.time(), '%m-%d-%Y', tz = 'America/Los_Angeles')`"
+params:
+  week: "week_3"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, echo = FALSE, warning=FALSE, message=FALSE, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, tidy = TRUE, tidy.opts = list(width.cutoff = 85))
+
+# It is good practice to always load your libraries first!
+library(tidyverse)
+library(ggthemes)
+library(scales)
+library(RColorBrewer)
+```
+
+**Submission** - Please knit your file as a **HTML** and submit your assignment to **Gradescope**.
+
+**Tips** - Please make sure to double check that your code does not run off the page in your knitted HTML. To fix this issue, go back to your code, and add new lines in your code by hitting enter so that part of the code chunk is on another line. 
+
+# Question 1 - Perform Copy and Rename
+
+Create a copy of this file to use for your exercise using `Save As` and name the copy as follows `03_exercise-1.Rmd` -> `03_exercise-1-firstname_lastname.Rmd`. 
+
+---
+
+# Question 2 - Why Copy and Rename?
+
+**Select all that TRUE** regarding why we require you to save a copy and rename `Rmd` files with the following suffix `-firstname_lastname` in DataHub? (Eg - [X] this answer is TRUE / [ ] this answer is FALSE).
+
+[ ] You should do this for any Rmd in `Datahub` in this course that you wish to edit and not just exercises and assignments.
+[ ] For the instructors to more easily identify you when grading your work.
+[ ] It reduces the compute that you use in `DataHub`. 
+[ ] To make you do more work.
+[ ] To ensure that your version of the code is fully preserved in its static state when the instructors push updates or release new weekly materials in `DataHub`
+
+---
+
+## Question 3 - YAML `week` Parameter
+
+Create a `week` object in your environment by pulling in the week parameter from the `YAML` (Hint - use `$`).
+
+```{r}
+# Type your answer here
+week = params$week
+```
+
+---
+
+## Question 4 - Read in Data
+
+Load in the `here` package and use it to read in `glp1_data.csv` from the `PHW251B/week_3/data`. Name the dataframe `data`.
+
+```{r}
+# Type your answer here
+data = read_csv(here(week, "data", "glp1_data.csv"))
+```
+
+---
+
+## Question 5 - Data-Ink Ratio 
+
+Describe what the Data-Ink Ratio is in 1 or 2 sentences.
+
+_Type your answer here_
+
+## Question 5 - Create Bar Chart in 1 Call
+
+In `Module: Bar Charts` the `03_barcharts.Rmd` file demonstrates how to customize individual `ggplot2` layers when creating a bar chart. 
+
+Now, put the individual layers (i.e. Captions/Labels, Color, and Legend) together to produce a professional bar chart with a quality Data-Ink ratio using a single call. (Hints - you are going to use a lot of "+" to add layers & use a `theme_*`).
+
+```{r}
+# Type your answer here
+
+```
+
+---
+
+## Question 6 - Create Stacked Bar Chart
+
+Produce a **stacked bar chart** that shows `medicare plan` on the x-axis cases and the color the stacks by `race`. Use proper labelling titles, colors, and keep the data-ink ratio in mind!
+
+```{r}
+# Type your answer here
+
+```
+
+---
+
+## Question 7 - Create Dodged Bar Chart
+
+You have already created a stacked bar chart for tobacco consumption. Similarly, now that we have gone through grouped bar charts, produce a professional grouped barchart that shows the the number of cases of heart disease cases by each age group's sweetened beverage consumption.
+
+```{r}
+# Type your answer here
+
+```

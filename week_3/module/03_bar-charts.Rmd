@@ -1,0 +1,787 @@
+---
+title: "Module: Bar Charts"
+subtitle: "PHW251B: Data Visualization for Public Health"
+author: 
+  - "Ilya Moskalenko"
+  - "Manasa Susarla"
+params:
+  week: "week_3"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, echo = F, warning=F, message=F}
+knitr::opts_chunk$set(echo = TRUE, tidy = TRUE, tidy.opts = list(width.cutoff = 85))
+
+# It is good practice to always load your libraries first!
+library(tidyverse)
+library(ggthemes)
+library(scales)
+library(here)
+library(RColorBrewer)
+```
+
+## Introduction
+
+Welcome to the 2nd module of Week 3! The instructor is going to walk you through this module in a live session so you are invited to attend! If you are eager to learn about bar charts before the live session you are welcome to do so independently as well! :)
+
+In this module, we will explore how to utilize `R` and the `ggplot2` package to create publication-ready bar charts. Bar charts are useful in visualizing summary of data by categories.
+
+After this module, students should be able to:
+
+- Create basic graphs using `ggplot`
+- Use advanced `ggplot` aesthetics to customize graphs
+- Apply concepts of effective graphical design to produce professional graphs
+
+Helpful Resources:
+
+- ggplot Cheatsheet [link](https://raw.githubusercontent.com/rstudio/cheatsheets/main/data-visualization.pdf)
+
+## The Data
+
+For this exercise we are going to be using a `simulated dataset` for an observational electronic health record study on evaluating whether `GLP-1 agonists are protective against developing heart disease`. This dataset mimics the type of data that you would encounter when working with in a healthcare setting.  
+
+As background, `GLP-1 agonists` are a class of medications that are clinically used to manage blood sugar (glucose) levels in people with Type 2 diabetes and can also help treat obesity. The most commonly known GLP-1 agonist is `Ozempic`. The `inclusion criteria` for this cohort was having a diagnosis of 2 diabetetes, actively using `insulin`, and being aged 65+ at baseline. Meanwhile, the `exclusion criteria` is people who already have a heart disease diagnosis or are enrolled in a heart disease prevention program at hospital system.
+
+Here is the `data dictionary` containing the descriptions of each column.
+
+| `Column`            |	`Type`    | `Description`                                                                                  |
+|---------------------|-----------|------------------------------------------------------------------------------------------------|
+| `patient_id`        |	Character	| Unique identifier for each patient                                                             |
+| `glp1`              |	Factor	  | [Exposure] GLP-1 receptor agonists (Ozempic, Wegovy, etc) [Yes, No]         |
+| `heart_disease`     |	Factor	  | [Outcome] Heart disease [Yes, No]                                                      |
+| `age`               |	Numeric	  | Age at study entry [between 65–85 years]                                                       |
+| `age_category`      |	Factor	  | Age categorized by 5 year intervals [65, 70, 75, 80, 85]                                       |
+| `race`              |	Factor	  | Race category [White, Hispanic, Asian, Black, Multiracial, Native American, Pacific Islander]  |
+| `gender`            |	Factor	  | Gender identity [Male, Female, Non-binary]                                                     |
+| `medicare_plan`	    | Factor	  | Medicare insurance plan type [Original, Advantage, Supplement]                                 |
+| `smoking_status`    |	Factor	  | Smoking status at baseline [Never smoker, Former smoker, Current smoker]                       |
+| `diabetes`          |	Factor	  | Has type 2 diabetes [Yes - because everyone in this cohort has diabetes]                     |
+| `hypertension`      |	Factor	  | Has hypertension [Yes, No]                                                             |
+| `hyperlipidemia`    |	Factor	  | Has hyperlipidemia [Yes, No]                                                         |
+| `hospitalization`   | Factor	  | Was hospitalized at least once over past 2 years [Yes, No]                             |
+| `bmi`	              | Numeric	  | BMI (Body Mass Index)                                                                          |
+| `bmi_category`	    | Factor	  | Categorized BMI [Normal weight, Overweight, Obese]                                             |
+| `a1c`               |	Numeric	  | Hemoglobin A1C                                                                                 |
+| `sweet_beverages`	  | Factor	  | Average number of sweetened beverages per day                                                  |
+| `charlson_score`    | Numeric	  | Charlson comorbidity index score                                                               |
+| `insulin`           | Numeric	  | Using insulin [Yes, No]                                                                                 |
+| `metformin`         | Numeric	  | Using metformin [Yes, No]                                                                              |
+
+```{r}
+week = params$week
+
+data <- read_csv(here(week, "data", "glp1_data.csv")) 
+```
+
+# Part 1 -  Bar Plot Basic Anatomy with `ggplot2`
+
+---
+
+## 1.1 - How to initialize a barchart in `ggplot
+
+### Global vs. Local Layers in `ggplot2`
+
+One of the core strengths of `ggplot2` is its **layered grammar of graphics**, which gives you control over *where* and *how* you define your plot components.
+
+You can supply both the **data** and the **aesthetic mappings** (`aes()`) either:
+
+- **Globally** — inside the `ggplot()` function (applies to *all layers* unless overridden)
+- **Locally** — inside individual layers like `geom_bar()` (applies *only to that specific layer*)
+
+---
+
+### Key Differences: Global vs. Local Layering
+
+- **Global (`ggplot(data, aes())`)**
+  - Applies to all layers unless specifically overridden
+  - Reduces repetition
+  - Makes code more concise and readable
+  - Best use cases is when:
+    - All layers use the **same dataset**
+    - All layers share the **same aesthetic mappings**
+    - You want to define a clean base plot that can be extended with new layers
+
+- **Local (`geom_*()` with its own `data` and `aes()`)**
+  - Used only for the specific layer it’s attached to
+  - Allows for maximum flexibility
+  - Makes it easy to layer different datasets, styles, or mappings in the same plot
+  - Best use cases is when:
+    - Layers use **different datasets**
+    - You need to **override aesthetics** for a specific layer
+    - You want to keep the base plot **data-agnostic**, and supply info per layer
+
+---
+
+### Bar Charts with `ggplot2`: 4 Approaches
+
+This section compares four valid and useful approaches to creating the same bar chart from the same `race` variable:
+
+1 - **Raw data** (de-aggregated): `geom_bar()` counts rows.
+2 - **Pre-aggregated data**: the user calculates counts ahead of time.
+3 - **Inline aggregation**: counts done inside the `ggplot()` call with `dplyr::count()`.
+4 - **Local-only data and aesthetics**: data and `aes()` passed only to the `geom_bar()` layer.
+
+```{r fig.width=16, fig.height=4, message=FALSE, warning=FALSE}
+# 1 - Raw Data with Global Aesthetics
+# Global data and x mapping supplied to ggplot() — geom_bar() counts rows automatically
+p1 <- ggplot(data = data, aes(x = race)) +
+  geom_bar() 
+p1
+
+# 2 - Pre-Aggregated Data with Global Aesthetics
+# Summarise counts ahead of time, pass summarised data globally, use stat="identity"
+race_agg <- data %>%
+  group_by(race) %>%
+  summarise(count = n(), .groups = "drop")
+
+p2 <- ggplot(data = race_agg, aes(x = race, y = count)) +
+  geom_bar(stat = "identity") 
+p2
+
+# 3 - Inline Aggregation in ggplot()
+# Aggregate counts inline with dplyr::count() and supply the result to ggplot()
+p3 <- ggplot(data = data %>% count(race), aes(x = race, y = n)) +
+  geom_bar(stat = "identity") 
+p3
+
+# 4 - Local Data and Aesthetics
+# No global data/aes supplied; data and aesthetics are passed directly to geom_bar()
+p4 <- ggplot() +
+  geom_bar(data = data, aes(x = race))
+p4
+```
+
+## 1.2 - Titles, captions, axes labels, fonts
+
+Labels, titles, subtitles and captions transform a graphic from a collection of shapes into a meaningful narrative. Clear axis labels help viewers immediately understand what variables are being plotted and in what units, while a descriptive title and subtitle frame the purpose of the chart and highlight any salient patterns. A caption offers context such as data sources or notes about methodology, which builds trust and credibility. Including these elements reduces the cognitive effort required to interpret the visual and ensures that the intended message isn’t lost or misinterpreted by the audience.
+
+- **Title and subtitle**: Provide context and a clear description of what the plot shows. Use the title and subtitle arguments in `labs()`.
+- **Axis labels**: Label your x- and y-axes to make the plotted variables clear (`x` and `y` arguments in `labs()`).
+- **Caption**: Use the `caption` argument in `labs()` to cite data sources or add footnotes.
+- **Tag**: You can add a tag (e.g. “Figure 1”) using `tag` in `labs()`.
+- **Fonts and text styling**: Use `theme()` to adjust font `size`, `face` (bold/italic), `color`, font `family`, and `angle` for titles, subtitles and axis text. 
+
+```{r}
+barchart <- ggplot(data = data, aes(x = race))
+
+# Add custom labels to 'barchart' and customise fonts/text styling
+barchart +
+  geom_bar() +
+  labs(
+    title = "Counts of Study Participants in GLP-1 Cohort",       # Main title
+    subtitle = "by Race Group",                                   # Subtitle
+    tag = "Figure 1",                                             # Tag (e.g., figure number, name of the program that produced this figure - "03_exercise_1_bar_chart.Rmd")
+    x = "Race Group",                                             # X-axis label
+    y = "Count",                                                  # Y-axis label
+    caption = "Source: Simulated `glp1_data.csv` dataset"         # Caption/footnote
+  ) +
+  theme(
+    plot.title = element_text(size = 16, face = "bold"),          # Title font size & weight
+    plot.subtitle = element_text(size = 12, face = "italic"),     # Subtitle font size & style
+    plot.tag = element_text(size = 12, face = "bold"),            # Tag styling (size & weight)
+    axis.title.x = element_text(size = 12, face = "bold"),        # X-axis title font
+    axis.title.y = element_text(size = 12, face = "bold"),        # Y-axis title font
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 10), # Rotate x-axis tick labels
+    axis.text.y = element_text(size = 10),                        # Y-axis tick label size
+    plot.caption = element_text(size = 8, color = "grey40"),      # Caption font size & color
+    text = element_text(family = "sans")                          # Global font family
+  )
+```
+
+# Part 2 - Color
+
+***
+
+## 2.1 - Adding color
+
+We begin by defining a base bar chart that maps the `race` variable to the x‑axis. From this starting point, you can experiment with different approaches to applying color.
+
+### One color for all bars
+
+When you want a clean, simple look, you can fill all bars with a single color. This highlights the distribution shape without drawing attention to individual categories.
+
+```{r}
+barchart +
+  geom_bar(fill = "lightblue") +
+  labs(
+    title = "One Color for All Bars",
+    subtitle = "Every bar uses the same fill color"
+  ) +
+  theme(axis.text.x = element_text(angle = 15, hjust = 1, size = 10))
+
+# Creating x_axis_angle object to reuse for subsequent figures
+x_axis_angle = theme(axis.text.x = element_text(angle = 15, hjust = 1, size = 10))
+```
+
+### Fill color plus an outline
+
+Adding an outline can make bars stand out on a light background. Here we keep the light blue fill but outline each bar in black.
+
+```{r}
+barchart +
+  geom_bar(fill = "lightblue", color = "black") +
+  labs(
+    title = "Fill Color with Outline",
+    subtitle = "Light blue fill with black outlines"
+  ) +
+  x_axis_angle
+```
+
+### Color by group 
+
+Mapping the `fill` aesthetic to the grouping variable (`race`) assigns a different default color to each category, helping viewers distinguish between groups. Now we are going to go over the different ways of approaching this. 
+
+#### Using ggplot's default palette
+
+```{r}
+barchart +
+  geom_bar(aes(fill = race)) +
+  labs(
+    title = "Color by Race (Default Palette)",
+    subtitle = "Different colors assigned automatically"
+  ) +
+  x_axis_angle
+```
+
+### Manually specifying a vector of colors
+
+For full control over the palette, you can manually specify a vector of colors [as a reminder, a `vector` in R follows the following structure - `vector` = `c("color1", "color2", ..., "color_n")`]. Make sure that the number of colors provided matches the number of unique categories. **NOTE** - The **best use case** for this approach is when you are asked to specifically represent certain groups with specific colors such as if a stakeholder for a clinical trial wants the bar for the control group to be grey, treatment 1 to be blue, and treatment 2. Otherwise, we recommend using the `scale_fill_brewer` approach in the subsequent section because it is going to be more efficient  This approach is NOT recommended because the it is **less efficient** and the colors may not be **distinct enough to easily distinguish**.
+
+#### HEX values colors values
+
+- Resource for HEX value color picking tool [link](https://imagecolorpicker.com/color-code/2596be)
+
+```{r}
+barchart +
+  geom_bar(aes(fill = race)) +
+  labs(
+    title = "Color by Race (Manual HEX Values)",
+    subtitle = "Custom palette defined with hex codes"
+  ) +
+  x_axis_angle + 
+  scale_fill_manual(
+    values = c("#6539D7", "#998FC7", "#D4C2FC",
+               "#F9F5FF", "#624CAB", "#876BD1", "#14248A"))
+```
+
+#### Colors names
+
+- Resource for complete list of R color names [link](https://sites.stat.columbia.edu/tzheng/files/Rcolor.pdf)
+
+```{r}
+barchart +
+  geom_bar(aes(fill = race)) +
+  labs(
+    title = "Color by Race (Manual R Color Names)",
+    subtitle = "Custom palette defined with R color names"
+  ) +
+  x_axis_angle + 
+  scale_fill_manual(
+    values = c("grey70", "grey60", "grey50", 
+               "grey40", "grey30", "grey20", "grey10"))
+```
+
+#### Using `scale_fill_brewer`
+
+In `ggplot2`, `scale_fill_brewer` is a convenience function for applying **ColorBrewer's** palettes to the fill aesthetic of a plot. **ColorBrewer** is a curated set of colour schemes designed to be visually balanced, perceptually uniform and accessible to viewers with colour‑vision deficiencies. When you map a **categorical variable** to fill, `scale_fill_brewer` assigns each level a color from the specified palette—such as “Pastel1,” “Dark2,” or “PiYG”—so that the categories are easy to distinguish. It is particularly useful for **bar charts**, **stacked bar charts**, and **dodged bar charts** as well as other plots where you want harmonious colors without manually specifying hex codes. 
+
+As an aside from this exercise - `ggplot2` provides companion functions for **continuous variables** such as `scale_fill_distiller` or `scale_fill_gradient` to generate smooth gradients based on the same palettes.
+
+#### Default
+
+Mapping the `fill` aesthetic to the grouping variable (`race`) assigns a different default color to each category, helping viewers distinguish between groups.
+
+```{r}
+barchart +
+  geom_bar(aes(fill = race)) +
+  labs(
+    title = "Color by Race (`scale_fill_brewer` default)",
+    subtitle = "Different colors assigned automatically"
+  ) +
+  x_axis_angle +
+  scale_fill_brewer() 
+```
+
+Mapping the `fill` aesthetic to the grouping variable (`race`) assigns a different default color to each category, helping viewers distinguish between groups.
+
+```{r}
+barchart +
+  geom_bar(aes(fill = race)) +
+  labs(
+    title = "Color by Race (`scale_fill_brewer` default)",
+    subtitle = "Different colors assigned automatically"
+  ) +
+  x_axis_angle +
+  scale_fill_brewer() 
+```
+
+
+### Use a built‑in ColorBrewer palette
+
+The `RColorBrewer` palettes provide perceptually balanced sets of colors. Here we use the qualitative “Dark2” palette.
+
+- Link to `RColorBrewer` R package documentation -> [link](https://r-graph-gallery.com/38-rcolorbrewers-palettes.html)
+- Link to generic `colorbrewer` website -> [link](documentationhttps://colorbrewer2.org/#type=sequential&scheme=BuGn&n=3)
+
+```{r}
+barchart +
+  geom_bar(aes(fill = race)) +
+  scale_fill_brewer(palette = "Dark2") +
+  labs(
+    title = "Color by Race (Brewer Palette 'Dark2')",
+    subtitle = "Uses a perceptually balanced Brewer palette"
+  ) +
+  x_axis_angle
+```
+
+
+## 2.2 - Color Use Cases
+
+Color isn’t just for decoration; it can **encode additional information** or **draw the viewer’s attention**. The following examples highlight common use cases.
+
+### Color to depict quantity
+
+When the emphasis is on a **continuous** measure (such as `bmi` in our data) to map the bar fill to that value and use a gradient. Darker shades represent higher values.
+
+#### Optional explanation of the data manipulation prior to plotting 
+
+In the `tidyverse` workflow, we first derive a aggregated table that captures the average BMI for each racial group. Starting with the original data frame, `group_by(race)` splits the dataset into separate groups by `race`, and `summarise(avg_bmi = mean(bmi))` calculates the mean BMI within each group, returning one row per race.
+
+```{r}
+# Compute average BMI per race
+avg_bmi_df <- data %>%
+  group_by(race) %>%                                # Group by race
+  summarise(avg_bmi = mean(bmi), .groups = "drop")  # Compute avg bmi by race group then drop the group_by for subsequent steps
+
+# Plot
+ggplot(avg_bmi_df, aes(x = race, y = avg_bmi, fill = avg_bmi)) +
+  geom_bar(stat = "identity") +
+  scale_fill_gradient(low = "darkgrey", high = "darkred") +
+  labs(
+    title = "Average BMI by Race (Gradient Fill)",
+    subtitle = "Color intensity reflects the magnitude of BMI"
+  ) +
+  x_axis_angle
+```
+
+### Color to highlight a specific group
+
+To **emphasize a particular category**, assign most bars a neutral color and highlight the group of interest with a distinct color. Below we highlight the race with the highest average BMI.
+
+#### Optional explanation of the data manipulation prior to plotting 
+
+With the aggregated data frame `avg_bmi_df` in hand from the earlier code chunk, we then determine which group has the highest average BMI and flag it for highlighting. We achieve this by calling `mutate()` to create a new column, highlight_color. Inside `mutate()`, the `if_else()` function tests whether each row’s avg_bmi value is equal to the maximum avg_bmi across all races; if it is, that row receives the color "darkred" (marking it as special), and all other rows receive "darkgrey". This results in a single table that not only contains the average BMI by race but also specifies a color to be used in the plot for each race, enabling the subsequent visualization to emphasize the group with the highest average BMI.
+
+```{r}
+# Add a column that assigns a highlight color using tidyverse logic
+avg_bmi_highlighted <- avg_bmi_df %>%
+  mutate(highlight_color = if_else(                 # Deploy if_else() for binary conditional logic
+    avg_bmi == max(avg_bmi),                        # TRUE for the highest average BMI
+    "darkred",                                      # Highlight color
+    "darkgrey"                                      # Neutral color
+  ))
+
+# Plot, using the new column as the fill aesthetic
+ggplot(avg_bmi_highlighted, aes(x = race, y = avg_bmi, fill = highlight_color)) +
+  geom_bar(stat = "identity") +
+  scale_fill_identity() +  # Use colors directly without a legend
+  labs(
+    title = "Highlight Highest Average BMI",
+    subtitle = "One group emphasised using a distinct color"
+  ) +
+  x_axis_angle
+```
+
+### Color to distinguish between groups (Will become more useful in Stacked & Dodged bar plots!!)
+
+When comparing multiple categories—such as in stacked or grouped bar charts—it’s **important that each group be easily distinguishable**. Use a qualitative or diverging palette for categorical data.
+
+```{r}
+# Pre-aggregated bar chart for counts by race
+barchart2 <- ggplot(data = race_agg, aes(x = race, y = count))
+
+barchart2 +
+  geom_bar(stat = "identity", aes(fill = race)) +
+  scale_fill_brewer(palette = "Spectral") +
+  labs(
+    title = "Color to Distinguish Between Groups",
+    subtitle = "Qualitative/diverging palette suitable for categorical data"
+  ) +
+  x_axis_angle
+```
+
+## 2.3 - Legend
+
+A **legend is essential when using color to encode information because it explains what each hue represents**. Without it, viewers would have to guess which category or value range corresponds to each color, undermining the clarity of the visualization. In ggplot2, legends are generated automatically whenever a mapped aesthetic requires explanation (such as fill, color, linetype or size). You can customize the legend’s title, position, orientation and appearance to ensure it complements your chart rather than distracts from it. This code chunk demonstrates a few ways to tailor the legend using a single scale function for the `fill` aesthetic (`aes()`) and the `guides()` and `theme()` functions:
+
+```{r}
+# Base pre-aggregated bar chart
+barchart2 <- ggplot(data = race_agg, aes(x = race, y = count, fill = race)) +
+  geom_bar(stat = "identity") 
+
+# 1 – Change palette and legend title, position legend at the bottom
+barchart2 +
+  labs(title = "Legend at Bottom: Accent Palette",
+       subtitle = "Change palette and legend title, place legend at the bottom") +
+  scale_fill_brewer(palette = "Accent", name = "Race Group") +
+  theme(legend.position = "bottom")
+
+# 2 – Place the legend at the top and center it
+barchart2 +
+  labs(title = "Legend at Top (Centered)",
+       subtitle = "Place the legend at the top and center it") +
+  scale_fill_brewer(palette = "Accent", name = "Race Group") +
+  theme(
+    legend.position = "top",
+    legend.justification = "center"
+  )
+
+# 3 – Customise legend direction, rows, title position, and reverse order
+barchart2 +
+  labs(
+    title = "Custom Legend Layout",
+    subtitle = "Title above keys, horizontal keys, two rows, reversed order"
+  ) +
+  scale_fill_brewer(palette = "Accent", name = "Race Group") +
+  guides(fill = guide_legend(
+    title.position = "top",    # move legend title above the keys
+    direction = "horizontal",  # lay out keys horizontally
+    nrow = 2,                  # split the legend into two rows
+    reverse = TRUE             # reverse the order of the keys
+  )) +
+  theme(
+    legend.position = "bottom",
+    legend.title = element_text(face = "bold"),
+    legend.text = element_text(size = 8),
+    legend.key.size = unit(0.4, "cm")
+  )
+```
+
+## 2.4 - Gridlines/background & Themes
+
+You can refine the look of your charts by selectively removing gridlines, changing the background, or applying different themes. Edward Tufte’s **data–ink ratio** principle suggests that charts should maximize the proportion of ink used to represent data versus non‑data elements. **By reducing or eliminating unnecessary gridlines and backgrounds, you direct the viewer’s focus to the data itself**. Conversely, a thoughtfully chosen theme or background color can enhance readability or support a particular aesthetic.
+
+- Resource for ggthemes documentation [link](https://ggplot2.tidyverse.org/reference/ggtheme.html)
+
+```{r, out.width=70%}
+# Base pre-aggregated bar chart
+barchart2 <- ggplot(data = race_agg, aes(x = race, y = count, fill = race)) +
+  geom_bar(stat = "identity") +
+  x_axis_angle
+
+# Remove vertical gridlines only
+barchart2 +
+  labs(title = "Remove Vertical Gridlines",
+       subtitle = "Eliminate vertical lines to reduce visual clutter") +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank()
+  ) +
+  x_axis_angle
+
+# Remove horizontal gridlines only
+barchart2 +
+  labs(title = "Remove Horizontal Gridlines",
+       subtitle = "Keep vertical lines while removing horizontal ones") +
+  theme(
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor.y = element_blank()
+  ) +
+  x_axis_angle
+
+# Remove all gridlines and panel background
+barchart2 +
+  labs(title = "Remove Gridlines and Background",
+       subtitle = "Focus entirely on the data bars") +
+  theme(
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.background = element_blank(),
+    axis.line = element_line(color = "black")
+  ) +
+  x_axis_angle
+
+# Add a custom panel background colour
+barchart2 +
+  labs(title = "Custom Panel Background",
+       subtitle = "Use a light tint to separate the panel from the page") +
+  theme(
+    panel.background = element_rect(fill = "#F9F5FF", size = 2, linetype = "solid")
+  ) +
+  x_axis_angle
+
+# Apply minimalistic themes from ggthemes
+
+# Tufte theme: emphasises data–ink ratio by removing non‑essential elements
+barchart2 +
+  labs(title = "Minimalist Tufte Theme",
+       subtitle = "A high data–ink ratio: no gridlines, minimal embellishment") +
+  theme_tufte() +
+  x_axis_angle
+
+# Inverse gray theme: light text and lines on a dark background
+barchart2 +
+  labs(title = "Inverse Gray Theme",
+       subtitle = "Low-contrast palette, good for screen presentations") +
+  theme_igray() +
+  theme(axis.text.x = element_text(angle = 15, hjust = 1, size = 10))
+
+# Solarized dark theme: high contrast dark background
+barchart2 +
+  labs(title = "Solarized Dark Theme",
+       subtitle = "Dark theme with muted colors for the data bars") +
+  theme_solarized(light = FALSE) +
+  x_axis_angle
+
+# Additional theme examples for variety
+
+# White background with gridlines (theme_bw)
+barchart2 +
+  labs(title = "White Background (theme_bw)",
+       subtitle = "Clean white background with gridlines") +
+  theme_bw() +
+  x_axis_angle
+
+# Minimal gridlines (theme_minimal)
+barchart2 +
+  labs(title = "Minimal Theme",
+       subtitle = "Only major gridlines are shown") +
+  theme_minimal() +
+  x_axis_angle
+
+# Classic theme: axes only, no background or gridlines
+barchart2 +
+  labs(title = "Classic Theme",
+       subtitle = "Axes lines without gridlines or panel background") +
+  theme_classic() +
+  x_axis_angle
+
+# Void theme: remove all axes, gridlines, and background
+barchart2 +
+  labs(title = "Void Theme",
+       subtitle = "No axes or gridlines; pure data ink") +
+  theme_void() +
+  x_axis_angle
+```
+
+---
+
+# Part 3: Types of Bar Charts
+
+Having looked at ways to polish simple bar charts, we now turn to more complex variants. A stacked bar chart lets you see how counts or proportions within each primary category break down by subcategory.
+
+## 3.1 Stacked bar chart
+
+To examine how `metformin` use varies across race groups in the GLP‑1 cohort, we can create a **stacked bar chart**. Each bar represents a race group, and the segments within each bar correspond to them taking `metformin`.
+
+### 3.1.0 Stacked bar chart with ggplot's default palette
+
+```{r}
+# Ensure sweet_beverages is treated as a factor
+stacked_bc <- ggplot(data, aes(x = race, fill = metformin)) +
+  geom_bar()
+
+stacked_bc +
+  labs(
+    title = "Participants by Race and Metformin Use",
+    subtitle = "Each bar shows how many participants in each race group fall into each consumption level",
+    x = "Race Group",
+    y = "Number of Participants",
+    fill = "Metformin Use"
+  ) +
+  x_axis_angle
+```
+
+### 3.1.1 Color
+
+Selecting a clear and consistent color palette is important for distinguishing between the levels of `sweet_beverages` and for ensuring that the chart is accessible and aesthetically pleasing. Aim to selec palettes that improve readability and the message that you are trying to convey.
+
+#### Default ColorBrewer palette
+This example uses ggplot2’s default palette for discrete fills. It automatically assigns distinct colors to each level of `metformin`, making it easy to tell the categories apart without specifying a palette manually.
+
+```{r}
+stacked_bc +
+  labs(title = "Default ColourBrewer Palette",
+       subtitle = "Using ggplot2's default palette for discrete fills",
+       x = "Race Group", y = "Number of Participants", fill = "Metformin Use") +
+  scale_fill_brewer() +
+  x_axis_angle
+```
+
+
+### 3.1.2 Outline/Border
+
+Adding thin outlines/borders around the stacked segments can help make adjacent colors look more distinct from each other, especially when colors are similar. To do this we can add an additional `geom_bar()` layer and specify the `color` parameter to the existing `stacked_bc` object in the environment. 
+
+**A few things to note** - 
+
+- Now that we have used both the `fill` and `color` parameters, it is important to highlight the distinction between the two in regards to bar charts. 
+  - `fill` controls the color inside the bar chart rectangles
+  - `color` controls the color of the border outlinging the bar chart rectangles 
+  
+- If your data is not aggregated to 1 row per your categorical value to be used for the x-axis (`race` in the demo) and your categorical value to be used for the stacked colors (`sweet_beverages` in the demo) may appear doubled. Therefore, you must first aggregate your data to 1 row per categorical grouping pair as follows `group_by`(category1,category2) %>% `summarize`(`n()`).
+
+```{r}
+stacked_bc +
+  geom_bar(color = "black") + ## Added this layer here
+  labs(title = "Adding a outline/border around the number of `sweet_beverages` group",
+       subtitle = "Using the `color` parameter to specify a `black` outline border",
+       fill = "Metformin Use") +
+  scale_fill_manual(values = c("#78CDD7", "#44A1A0")) +
+  x_axis_angle
+
+```
+
+
+
+The code for everything else for dodged bar charts is similar to what has been previously covered in this module.
+
+
+## 3.3: Faceting
+
+In this section we are going to demonstrate how you can facet you your plots using `ggplot2` with `geom_bar` (Note - you can use facet any `geom_*`)
+
+### Using `facet_grid`
+
+  - Layout -  facet_grid() arranges the facets in a grid, with one variable assigned to rows and another to columns.
+  - Syntax The formula facet_grid(rows ~ columns) is used, where rows is the variable for rows and columns is the variable for columns.
+  - **Use Case** - This is useful when you have **2 categorical variables** and you want to see how they interact across a grid. 
+
+#### 3.3.1.1: Faceting by one feature
+
+```{r, message=FALSE, fig.align='center'}
+# Making it look cleaner
+names(data)
+data %>%
+  ggplot(aes(x = heart_disease, fill = gender)) +
+  geom_bar(position = "dodge", color = "black") +
+  labs(x = "Heart Disease Status", y = "Count", 
+       title = "Bar Plot of Heart Disease by Gender",
+       subtitle = "Faceted by Medicare Plan Type") +
+  scale_fill_brewer(palette = "Pastel2", name = "Gender Identity") + # Be mindful of assigning colors to gender
+  facet_grid(~ hypertension) + # 1 Feature: Education by Race
+  theme_classic() +
+  theme(legend.position = "bottom") 
+```
+
+### 3.3.1.2: Faceting by two features
+
+```{r, fig.width=14, fig.length=14, fig.align='center'}
+data %>%
+  ggplot(aes(x = heart_disease, fill = gender)) +
+  geom_bar(position = "dodge", color = "black") +
+  labs(x = "Heart Disease Status", y = "Count", 
+       title = "Bar Plot of Heart Disease by Gender",
+       subtitle = "Faceted by Medicare Plan Type") +
+  scale_fill_brewer(palette = "Pastel2", name = "Gender Identity") + # Be mindful of assigning colors to gender
+  facet_grid(hyperlipidemia ~ hypertension) + # 1 Feature: Education by Race
+  theme_classic() +
+  theme(legend.position = "bottom") 
+```
+
+### Using `facet_wrap`
+
+  - **Syntax** -> `facet_wrap(~ variable)` where variable is the categorical variable you want to facet by.
+
+  - **Automatic Layout** -> Arranges the facets in a flexible layout that can wrap across multiple rows or columns based on the number of levels in the categorical variable.
+
+  - **One Variable** -> Accepts just 1 categorical variable for faceting.
+
+  - **Use Case** -> Best for visualizing one categorical variable with many levels, where a flexible, adaptive layout is preferred.
+  
+#### Same Y scale for each plot
+
+Not freeing the scales ensures that **each facet shares the same axis range, which allows for easier comparison across facets**. This consistency in scaling can help highlight relative differences between subsets of the data. Additionally, by keeping the scales fixed, any data sparsity becomes more apparent, as facets with fewer data points will show as smaller or less dense plots, making it easier to visually identify which facets may have sparse data (in this instance we see that there is some sparse data among Native American and Pacific Islander groups.
+
+```{r, fig.align='center'}
+data %>%
+  ggplot(aes(x = heart_disease, fill = gender)) +
+  geom_bar(position = "dodge", color = "black") +
+  labs(x = "Heart Disease Status", y = "Count", 
+       title = "Bar Plot of Heart Disease by Gender",
+       subtitle = "Faceted by race because it has many category levels") +
+  scale_fill_brewer(palette = "Pastel2", name = "Gender Identity") + 
+  facet_wrap(~ race) + # 1 Feature ~  Race
+  theme(legend.position = "bottom") 
+```
+
+#### Different Y scale for each plot
+
+Freeing the scales in faceting allows each facet to adjust its axes independently, which is useful when the data across facets have different ranges or distributions. This ensures that each facet's plot is scaled appropriately, **making it easier to compare trends or patterns within each subset of the data**. You can accomplish this by adding a `scales` parameter when deploying `facet_wrap`. In this code chunk, we are setting `scales = "free_y"` to make sure that the y-axis for each smaller plot is independent of the others. You can also use `free` to free both x-axis and y-axis or `free_x` to just free the `x-axis`. Note - in this particular instancde, `free_y`and `free` would both accomplish the same thing.
+
+```{r, fig.align='center'}
+data %>%
+  ggplot(aes(x = heart_disease, fill = gender)) +
+  geom_bar(position = "dodge", color = "black") +
+  labs(x = "Heart Disease Status", y = "Count", 
+       title = "Bar Plot of Heart Disease by Gender",
+       subtitle = "Faceted by race because it has many category levels") +
+  scale_fill_brewer(palette = "Pastel2", name = "Gender Identity") + 
+  facet_wrap(~ race, scales = "free_y") + # Modifaction
+  theme(legend.position = "bottom") 
+```
+
+### Faceting with subgroup proportions
+
+Let's take this chart one step further and change the y-axis to be proportions, so that the different groups are truly comparable. To do this, we rely on our `dyplr` toolkit we covered in previous lectures to create a new aggregated dataset. 
+
+This is an example of how we sometimes have to transform datasets before we visualize them. While `ggplot` has powerful innards that can take raw datasets, once we start grouping/faceting by multiple variables and want something like proportions, it often is easier to pre-process the data (and sometimes more understandable, from a programming sense)!
+
+#### Data aggregation
+
+```{r}
+# Create a new aggregated dataset grouped by gender and race, describing heart disease status
+data_agg = data %>%
+  # The 2 grouping variables
+  group_by(gender, race) %>%
+  # Perform aggregate computations
+  summarize(
+    # want to get the individual count in each gender-race group first
+    count = n(),
+    # Number of "Yes"es for heart disease
+    hd_yes = sum(heart_disease == "Yes", na.rm = T),
+    # Divide # of "Yes"es by the number of total respondents in a given Gender-Race group
+    freq = hd_yes/count,
+    # Here, we create labels but multiplying freq, rounding it, and adding "%" to the end
+    # This is a character variable, whereas freq was a numeric!
+    freq_lbl = paste0(round(freq*100), "%")) 
+
+# View data frame
+data_agg
+```
+
+# Finally, we can pipe it into ggplot
+
+A few important NOTES - 
+
+  - You could have directly piped the steps in the above code chunk into the ggplot however we thought that it would be beneficial to see the aggregated dataframe as an intermediate dataframe from a learning perspective
+  - We are demonstrating the use of `geom_col` here which takes an aggregated dataset and creates the plot without any under-the-hood calculation. We could equally have used `geom_bar(stat = "identity")` to create this same plot
+  - We removed the legend because in this scenario it is redundant as it is already depicted in the x-axis
+  - We added text labels using `geom_text` with a slight vertical adjustment
+  - We limited the y-axis to run from 0 to 70% using `scale_y_continuous` and specifying percent as the metric from the `scales` package
+
+```{r}
+ggplot(data_agg) +
+  geom_col(aes(x = gender, y = freq, fill = gender), position = "dodge", color= "black") +
+  geom_text(aes(x = gender, y = freq, label = freq_lbl), vjust = -1) +
+  labs(x = "\n% Who have heart disease", 
+       y = "Proportion", 
+       title = "Faceted Bar Plot of Smoking Status by Gender using facet_wrap with proportions") +
+  scale_y_continuous(labels = scales::percent, limits = c(0, 0.7)) +
+  scale_fill_brewer(palette = "Pastel2", name = "Gender Identity") +
+  facet_wrap(~ race) +
+  theme(legend.position = "none") 
+```
+
+Note that this changes our interpretation quite a bit -- it seems that females across different race/ethnicity groups all tend to proportionally smoke less than their male counterparts.
+
+
+## 3.4: Horizontal bar chart
+
+```{r}
+# Flipping the axis of the barchart
+barchart2 +
+  coord_flip() # Mention this to swap the x and y axes
+```

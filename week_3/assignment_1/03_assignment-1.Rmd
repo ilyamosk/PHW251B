@@ -1,0 +1,141 @@
+---
+title: 'Assignment 1 - Bar Charts'
+subtitle: 'PHW251B: Data Visualization for Public Health'
+author: "YOUR NAME HERE"
+date: "`r format(Sys.time(), '%m-%d-%Y', tz = 'America/Los_Angeles')`"
+params:
+  week: "week_3"
+output:
+  html_document:
+    df_print: paged
+---
+
+
+```{r setup, echo=FALSE, warning=FALSE, message=FALSE, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, tidy = TRUE, tidy.opts = list(width.cutoff = 85))
+
+# It is good practice to always load your libraries first!
+library(tidyverse)
+library(ggthemes)
+library(scales)
+library(RColorBrewer)
+```
+
+**Submission** - Please knit your file as a **HTML** and submit your assignment to **Gradescope**.
+
+**Tips** - Please make sure to double check that your code does not run off the page in your knitted HTML. To fix this issue, go back to your code, and add new lines in your code by hitting enter so that part of the code chunk is on another line. 
+
+
+Throughout **Assignment 1**, we will be using data on hotel bookings from two hotels - Hotel 1 is a resort hotel and Hotel 2 is a city hotel.
+
+---
+
+## PART 0 [Ungraded]
+
+### Perform Copy and Rename
+
+Create a copy of this file to use for your exercise using `Save As` and name the copy as follows `03_assignment-1.Rmd` -> `03_assignment-1-firstname_lastname.Rmd`. 
+
+### YAML `week` Parameter
+
+Create a `week` object in your environment by pulling in the week parameter from the `YAML` (Hint - use `$`).
+
+```{r}
+# Type your answer here
+```
+
+### Read in Data
+
+Load in the `here` package and use it to read in `hotel_bookings.csv` from the `PHW251B/week_3/data`. Name the dataframe `data`. Then output the names of the columns in the dataframe using the `names` function. 
+
+```{r}
+# Type your answer here
+```
+
+### Clean Names
+
+Load in the `janitor` package and use the `clean_names` function to clean the column names. Overwrite the dataframe `data` called `data`. Then output the names of the columns in the dataframe using the `names` function. The names should now be in **snake_case**!
+
+```{r}
+# Type your answer here
+```
+
+---
+
+## PART 1
+
+### Question 1
+
+We would like you to explore the dataset further and create a barchart of your choice (i.e. basic/regular, stacked, or grouped) and following the principles of good graphical design. We recommend you use this as an opportunity to step out of your comfort zone and try creating a barchart you haven't yet explored or trying out other modifications.
+
+Most of the Variables are Self-Explanatory with the exception of a few:
+
+  -`lead_time`: The number of days between arrival date and date when booking was entered into the system
+  
+  -`country`: Country of Origin; Country name documented in ISO3 codes
+  
+  -`is_repeated_guest`: 0 = No, 1 = Yes
+  
+  -`agent` or `company`: ID of Travel Agency or Company; NULL is not a missing value, rather it means "Not applicable" (in other words the booking was not from a travel agent/company)
+  
+  -`adr`: Average Daily Rate of the Hotel
+
+
+```{r}
+#Your Code
+
+```
+
+---
+
+### Question 2
+
+Please explain the variables you chose to explore and the type of barchart you created and your reasons for doing so. (2 - 5 sentences)
+
+
+YOUR ANSWER HERE
+
+
+---
+
+### Question 3
+
+Please comment on your design choices (i.e. color, other modifications). Was there a certain color scheme you chose and why you chose that? How does that impact your visualization? What other modifications did you make and how do you think those contribute to good graphical design?  (5 - 10 sentences)
+
+
+YOUR ANSWER HERE
+
+---
+
+## PART 2
+
+### Question 4
+
+Recreate the graph below with the "ggplot" package
+
+```{r}
+knitr::include_graphics(here(week, "assignment_1", "03_barchart.png"))
+```
+
+NOTES/TIPS:
+
+- Variables of Interest:
+
+  - `hotel`: 1 = Resort Hotel, 2 = City Hotel
+  
+  - `meal`: 
+    - BB = Bed and Breakfast
+    - HB = Half Board (breakfast and one other meal) 
+    - FB = Full Board (breakfast, lunch, and dinner) 
+    - SC = No meal package
+  
+  - `is_canceled`: 0 = Booking not Canceled, 1 = Booking was Canceled
+
+  - `Classic Theme`, Serif Font, and 12 pt. Font size
+
+
+```{r}
+#Your Code
+
+```
+
