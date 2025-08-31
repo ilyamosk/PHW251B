@@ -48,7 +48,7 @@ Create a `week` object in your environment by pulling in the week parameter from
 
 ```{r}
 # Type your answer here
-week = params$week
+
 ```
 
 ---
@@ -59,7 +59,7 @@ Load in the `here` package and use it to read in `glp1_data.csv` from the `PHW25
 
 ```{r}
 # Type your answer here
-data = read_csv(here(week, "data", "glp1_data.csv"))
+
 ```
 
 ---
