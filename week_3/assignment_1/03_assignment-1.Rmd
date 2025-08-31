@@ -6,8 +6,7 @@ date: "`r format(Sys.time(), '%m-%d-%Y', tz = 'America/Los_Angeles')`"
 params:
   week: "week_3"
 output:
-  html_document:
-    df_print: paged
+  word_document: default
 ---
 
 
@@ -21,14 +20,21 @@ library(scales)
 library(RColorBrewer)
 ```
 
-**Submission** - Please knit your file as a **HTML** and submit your assignment to **Gradescope**.
+# Instructions
 
-**Tips** - Please make sure to double check that your code does not run off the page in your knitted HTML. To fix this issue, go back to your code, and add new lines in your code by hitting enter so that part of the code chunk is on another line. 
+## Submission 
 
+Please knit your file as a **Word Document** and submit your assignment to **Gradescope**.
 
-Throughout **Assignment 1**, we will be using data on hotel bookings from two hotels - Hotel 1 is a resort hotel and Hotel 2 is a city hotel.
+## Tips 
 
----
+  - Please make sure to double check that your code does not run off the page in your knitted **Word Document**. To fix this issue, go back to your code, and add new lines in your code by hitting enter so that part of the code chunk is on another line. 
+
+## Data
+
+Throughout **Assignment 1**, we will be using data on hotel bookings from two hotels - Hotel 1 is a resort hotel and Hotel 2 is a city hotel from this file `hotel_bookings.csv`.
+
+\newpage 
 
 ## PART 0 [Ungraded]
 
@@ -60,7 +66,7 @@ Load in the `janitor` package and use the `clean_names` function to clean the co
 # Type your answer here
 ```
 
----
+\newpage 
 
 ## PART 1
 
@@ -86,7 +92,7 @@ Most of the Variables are Self-Explanatory with the exception of a few:
 
 ```
 
----
+\newpage 
 
 ### Question 2
 
@@ -96,7 +102,7 @@ Please explain the variables you chose to explore and the type of barchart you c
 YOUR ANSWER HERE
 
 
----
+\newpage 
 
 ### Question 3
 
@@ -105,7 +111,7 @@ Please comment on your design choices (i.e. color, other modifications). Was the
 
 YOUR ANSWER HERE
 
----
+\newpage 
 
 ## PART 2
 

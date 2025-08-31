@@ -40,34 +40,34 @@ Helpful Resources:
 
 ## The Data
 
-For this exercise we are going to be using a `simulated dataset` for an observational electronic health record study on evaluating whether `GLP-1 agonists are protective against developing heart disease`. This dataset mimics the type of data that you would encounter when working with in a healthcare setting.  
+For this exercise we are going to be using a simulated dataset for an observational electronic health record study on evaluating whether `GLP-1 agonists are protective against developing heart disease`. This dataset mimics the type of data that you would encounter when working with in a healthcare setting.  
 
-As background, `GLP-1 agonists` are a class of medications that are clinically used to manage blood sugar (glucose) levels in people with Type 2 diabetes and can also help treat obesity. The most commonly known GLP-1 agonist is `Ozempic`. The `inclusion criteria` for this cohort was having a diagnosis of 2 diabetetes, actively using `insulin`, and being aged 65+ at baseline. Meanwhile, the `exclusion criteria` is people who already have a heart disease diagnosis or are enrolled in a heart disease prevention program at hospital system.
+As background, `GLP-1 agonists` are a class of medications that are clinically used to manage blood sugar (glucose) levels in people with Type 2 diabetes and can also help treat obesity. The most commonly known GLP-1 agonist is `Ozempic`. The `inclusion criteria` for this cohort was having a diagnosis of 2 diabetes, actively using `insulin`, and being aged 65+ at baseline.
 
 Here is the `data dictionary` containing the descriptions of each column.
 
 | `Column`            |	`Type`    | `Description`                                                                                  |
 |---------------------|-----------|------------------------------------------------------------------------------------------------|
 | `patient_id`        |	Character	| Unique identifier for each patient                                                             |
-| `glp1`              |	Factor	  | [Exposure] GLP-1 receptor agonists (Ozempic, Wegovy, etc) [Yes, No]         |
-| `heart_disease`     |	Factor	  | [Outcome] Heart disease [Yes, No]                                                      |
+| `glp1`              |	Factor	  | [Exposure] GLP-1 receptor agonists (Ozempic, Wegovy, etc) [Yes, No]                            |
+| `heart_disease`     |	Factor	  | [Outcome] Heart disease [Yes, No]                                                              |
 | `age`               |	Numeric	  | Age at study entry [between 65–85 years]                                                       |
 | `age_category`      |	Factor	  | Age categorized by 5 year intervals [65, 70, 75, 80, 85]                                       |
 | `race`              |	Factor	  | Race category [White, Hispanic, Asian, Black, Multiracial, Native American, Pacific Islander]  |
 | `gender`            |	Factor	  | Gender identity [Male, Female, Non-binary]                                                     |
 | `medicare_plan`	    | Factor	  | Medicare insurance plan type [Original, Advantage, Supplement]                                 |
 | `smoking_status`    |	Factor	  | Smoking status at baseline [Never smoker, Former smoker, Current smoker]                       |
-| `diabetes`          |	Factor	  | Has type 2 diabetes [Yes - because everyone in this cohort has diabetes]                     |
-| `hypertension`      |	Factor	  | Has hypertension [Yes, No]                                                             |
-| `hyperlipidemia`    |	Factor	  | Has hyperlipidemia [Yes, No]                                                         |
-| `hospitalization`   | Factor	  | Was hospitalized at least once over past 2 years [Yes, No]                             |
+| `diabetes`          |	Factor	  | Has type 2 diabetes [Yes - because everyone in this cohort has diabetes]                       |
+| `hypertension`      |	Factor	  | Has hypertension [Yes, No]                                                                     |
+| `hyperlipidemia`    |	Factor	  | Has hyperlipidemia [Yes, No]                                                                   |
+| `hospitalization`   | Factor	  | Was hospitalized at least once over past 2 years [Yes, No]                                     |
 | `bmi`	              | Numeric	  | BMI (Body Mass Index)                                                                          |
 | `bmi_category`	    | Factor	  | Categorized BMI [Normal weight, Overweight, Obese]                                             |
 | `a1c`               |	Numeric	  | Hemoglobin A1C                                                                                 |
 | `sweet_beverages`	  | Factor	  | Average number of sweetened beverages per day                                                  |
 | `charlson_score`    | Numeric	  | Charlson comorbidity index score                                                               |
-| `insulin`           | Numeric	  | Using insulin [Yes, No]                                                                                 |
-| `metformin`         | Numeric	  | Using metformin [Yes, No]                                                                              |
+| `insulin`           | Numeric	  | Using insulin [Yes, No]                                                                        |
+| `metformin`         | Numeric	  | Using metformin [Yes, No]                                                                      |
 
 ```{r}
 week = params$week

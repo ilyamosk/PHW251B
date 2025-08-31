@@ -1,14 +1,12 @@
 ---
-title: 'Exercise 1 - Bar Charts'
+title: "Exercise 1 - Bar Charts"
 subtitle: 'PHW251B: Data Visualization for Public Health'
 author: "YOUR NAME HERE"
 date: "`r format(Sys.time(), '%m-%d-%Y', tz = 'America/Los_Angeles')`"
+output:
+  word_document: default
 params:
-  week: "week_3"
-output: pdf_document
-header-includes:
-  - \usepackage{etoolbox}
-  - \pretocmd{\section}{\ifnum\value{section}>0\clearpage\fi}{}{}
+  week: week_3
 ---
 
 
@@ -22,21 +20,56 @@ library(scales)
 library(RColorBrewer)
 ```
 
-**Submission** - Please knit your file as a **PDF** and submit your assignment to **Gradescope**.
+# Instructions
 
-**Tips** 
+## Submission 
+
+Please knit your file as a **Word Document** and submit your assignment to **Gradescope**.
+
+## Tips 
 
   - **Questions 1-4** pertain to content from `Lab Module 0` in `Week 1`.
 
   - **Questions 5-8** pertain to content from the `Bar Charts Module` in `Week 3`.
 
-  - Please make sure to double check that your code does not run off the page in your knitted **PDF**. To fix this issue, go back to your code, and add new lines in your code by hitting enter so that part of the code chunk is on another line. 
+  - Please make sure to double check that your code does not run off the page in your knitted **Word Document**. To fix this issue, go back to your code, and add new lines in your code by hitting enter so that part of the code chunk is on another line. 
+  
+\newpage  
+  
+## Data
+
+You are going to be using the same `glp1_data.csv` file as in the `Bar Chart Module`. Here is the data dictionary for that dataset. 
+
+| `Column`            |	`Type`    | `Description`                                                                                  |
+|---------------------|-----------|------------------------------------------------------------------------------------------------|
+| `patient_id`        |	Character	| Unique identifier for each patient                                                             |
+| `glp1`              |	Factor	  | [Exposure] GLP-1 receptor agonists (Ozempic, Wegovy, etc) [Yes, No]                            |
+| `heart_disease`     |	Factor	  | [Outcome] Heart disease [Yes, No]                                                              |
+| `age`               |	Numeric	  | Age at study entry [between 65–85 years]                                                       |
+| `age_category`      |	Factor	  | Age categorized by 5 year intervals [65, 70, 75, 80, 85]                                       |
+| `race`              |	Factor	  | Race category [White, Hispanic, Asian, Black, Multiracial, Native American, Pacific Islander]  |
+| `gender`            |	Factor	  | Gender identity [Male, Female, Non-binary]                                                     |
+| `medicare_plan`	    | Factor	  | Medicare insurance plan type [Original, Advantage, Supplement]                                 |
+| `smoking_status`    |	Factor	  | Smoking status at baseline [Never smoker, Former smoker, Current smoker]                       |
+| `diabetes`          |	Factor	  | Has type 2 diabetes [Yes - because everyone in this cohort has diabetes]                       |
+| `hypertension`      |	Factor	  | Has hypertension [Yes, No]                                                                     |
+| `hyperlipidemia`    |	Factor	  | Has hyperlipidemia [Yes, No]                                                                   |
+| `hospitalization`   | Factor	  | Was hospitalized at least once over past 2 years [Yes, No]                                     |
+| `bmi`	              | Numeric	  | BMI (Body Mass Index)                                                                          |
+| `bmi_category`	    | Factor	  | Categorized BMI [Normal weight, Overweight, Obese]                                             |
+| `a1c`               |	Numeric	  | Hemoglobin A1C                                                                                 |
+| `sweet_beverages`	  | Factor	  | Average number of sweetened beverages per day                                                  |
+| `charlson_score`    | Numeric	  | Charlson comorbidity index score                                                               |
+| `insulin`           | Numeric	  | Using insulin [Yes, No]                                                                        |
+| `metformin`         | Numeric	  | Using metformin [Yes, No]                                                                      |
+
+\newpage
 
 # Question 1 - Perform Copy and Rename
 
 Create a copy of this file to use for your exercise using `Save As` and name the copy as follows `03_exercise-1.Rmd` -> `03_exercise-1-firstname_lastname.Rmd`. 
 
----
+\newpage
 
 # Question 2 - Why Copy and Rename?
 
@@ -48,9 +81,9 @@ Create a copy of this file to use for your exercise using `Save As` and name the
 [ ] To make you do more work.
 [ ] To ensure that your version of the code is fully preserved in its static state when the instructors push updates or release new weekly materials in `DataHub`
 
----
+\newpage
 
-## Question 3 - YAML `week` Parameter
+# Question 3 - YAML `week` Parameter
 
 Create a `week` object in your environment by pulling in the week parameter from the `YAML` (Hint - use `$`).
 
@@ -59,26 +92,26 @@ Create a `week` object in your environment by pulling in the week parameter from
 
 ```
 
----
+\newpage
 
-## Question 4 - Read in Data
+# Question 4 - Read in Data
 
-Load in the `here` package and use it to read in `glp1_data.csv` from the `PHW251B/week_3/data`. Name the dataframe `data`.
+Load in the `here` package and use it to read in `glp1_data.csv` from the `PHW251B/week_3/data`. Name the dataframe `data`. 
 
 ```{r}
 # Type your answer here
 
 ```
 
----
+\newpage
 
-## Question 5 - Data-Ink Ratio 
+# Question 5 - Data-Ink Ratio 
 
 Describe what the Data-Ink Ratio is in 1 or 2 sentences.
 
 _Type your answer here_
 
-## Question 6 - Create Bar Chart in 1 Call
+# Question 6 - Create Bar Chart in 1 Call
 
 In `Module: Bar Charts` the `03_barcharts.Rmd` file demonstrates how to customize individual `ggplot2` layers when creating a bar chart. 
 
@@ -89,22 +122,22 @@ Now, using the `data` that we read in for Question 4, put the individual layers 
 
 ```
 
----
+\newpage
 
-## Question 7 - Create Stacked Bar Chart
+# Question 7 - Create Stacked Bar Chart
 
-Produce a **stacked bar chart** that shows `medicare plan` on the x-axis cases and the color the stacks by `race` using a diverging palette. Use proper labelling titles, colors, and keep the data-ink ratio in mind!
+Produce a **stacked bar chart** that shows `medicare plan` on the x-axis cases and the color the stacks by `race` using a diverging palette. Use proper labeling titles, colors, and us a theme to reduce reduce the data ink ratio.
 
 ```{r}
 # Type your answer here
 
 ```
 
----
+\newpage
 
-## Question 8 - Create Dodged Bar Chart
+# Question 8 - Create Dodged/Grouped Bar Chart
 
-You have already created a stacked bar chart for tobacco consumption. Similarly, now that we have gone through grouped bar charts, produce a professional grouped barchart that shows the the number of cases of heart disease cases by each age group's sweetened beverage consumption.
+Amend your code from **Question 7** to produce a **dodged/grouped bar chart** that shows `medicare plan` on the x-axis cases and the color the groups by `race` using a diverging palette. Use proper labeling titles, colors, and us a theme to reduce reduce the data ink ratio.
 
 ```{r}
 # Type your answer here
