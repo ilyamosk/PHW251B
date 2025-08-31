@@ -6,7 +6,7 @@ date: "`r format(Sys.time(), '%m-%d-%Y', tz = 'America/Los_Angeles')`"
 params:
   week: "week_3"
 output:
-  html_document:
+  html_document: ##### PDF ######
     df_print: paged
 ---
 
@@ -20,9 +20,15 @@ library(scales)
 library(RColorBrewer)
 ```
 
-**Submission** - Please knit your file as a **HTML** and submit your assignment to **Gradescope**.
+**Submission** - Please knit your file as a **PDF** and submit your assignment to **Gradescope**.
 
-**Tips** - Please make sure to double check that your code does not run off the page in your knitted HTML. To fix this issue, go back to your code, and add new lines in your code by hitting enter so that part of the code chunk is on another line. 
+**Tips** 
+
+  - **Questions 1-4** pertain to content from `Lab Module 0` in `Week 1`.
+
+  - **Questions 5-8** pertain to content from the `Bar Charts Module` in `Week 3`.
+
+  - Please make sure to double check that your code does not run off the page in your knitted **PDF**. To fix this issue, go back to your code, and add new lines in your code by hitting enter so that part of the code chunk is on another line. 
 
 # Question 1 - Perform Copy and Rename
 
@@ -74,7 +80,7 @@ _Type your answer here_
 
 In `Module: Bar Charts` the `03_barcharts.Rmd` file demonstrates how to customize individual `ggplot2` layers when creating a bar chart. 
 
-Now, put the individual layers (i.e. Captions/Labels, Color, and Legend) together to produce a professional bar chart with a quality Data-Ink ratio using a single call. (Hints - you are going to use a lot of "+" to add layers & use a `theme_*`).
+Now, using the `data` that we read in for Question 4, put the individual layers (i.e. Captions/Labels, Color, and Legend) together to produce a professional bar chart with a quality Data-Ink ratio using a single call. (Hints - you are going to use a lot of "+" to add layers & use a `theme_*`). Feel free to use any **categorical/factor** variables in the dataset that you want to explore!
 
 ```{r}
 # Type your answer here
@@ -85,7 +91,7 @@ Now, put the individual layers (i.e. Captions/Labels, Color, and Legend) togethe
 
 ## Question 7 - Create Stacked Bar Chart
 
-Produce a **stacked bar chart** that shows `medicare plan` on the x-axis cases and the color the stacks by `race`. Use proper labelling titles, colors, and keep the data-ink ratio in mind!
+Produce a **stacked bar chart** that shows `medicare plan` on the x-axis cases and the color the stacks by `race` using a diverging palette. Use proper labelling titles, colors, and keep the data-ink ratio in mind!
 
 ```{r}
 # Type your answer here
