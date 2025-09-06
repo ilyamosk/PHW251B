@@ -1,0 +1,322 @@
+---
+title: 'Module: Strings & Dates'
+subtitle: 'PHW251B: Data Visualization for Public Health'
+author: 
+  - "Andrew Nguyen"
+  - "Ilya Moskalenko"
+params:
+  week: "week_5"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, echo = FALSE, warning=F, message=F}
+library(tidyverse)
+library(here)
+library(formatR)
+library(janitor)
+knitr::opts_chunk$set(echo = TRUE, tidy = TRUE, tidy.opts = list(width.cutoff = 85))
+
+```
+
+## Introduction
+
+Another useful set of tools in your proverbial EDA kit include being able to work with string, or character data. In the same vein, dates are powerful indicators of data that are instrumental to public health, from epidemic curves to pre- and post-intervention time frames. In this module, we'll go over some of the most common utilizations of strings and dates to enhance our data extraction skills. 
+
+Resources in alignment with this review module include:
+
+- PHW251A: Week 2
+- R4DS: Chapters 14 & 16
+
+## Objectives
+
+- String methods for data extraction & creation using `stringr`
+-	Date methods using `lubridate`
+
+## Data
+
+For this module, we will be utilizing a publicly-available dataset describing case detection data from monkeypox patients as compiled by Global Health Council (***<https://globalhealth.org/>***) and sourced from Kaggle: ***<https://www.kaggle.com/datasets/deepcontractor/monkeypox-dataset-daily-updated?select=Worldwide_Case_Detection_Timeline.csv>***
+
+The dataset describes the date of case detection, geography, sex and age information of the patient, symptoms, and binary indicators for hospitalization, isolation, and having a history of travel prior to disease.
+
+Additionally, we will look at a dataset describing health-related tweets from the British Broadcasting Company in 2015 using the Twitter API. It is sourced from Kaggle: ***<https://www.kaggle.com/datasets/prabhavsingh/health-related-tweets>***
+
+**Let's get started!**
+
+### String methods
+
+Not all of our data will be quantitative continuous data. Encoded in qualitative text can be important findings that can we analyzed as categorical or binary variables as either simple frequencies or indicator variables for regression models and the like. In this section, we'll explore some powerful tools in the `stringr` package (a part of the tidyverse library) that allows us to transform text data into a wide variety of operational data. As mentioned before, we'll be using a monkeypox case identification dataset sourced GHC and hosted by Kaggle.
+
+[NOTE - we updated the `gsub` function from the accompaning video with the `clean_names` function from the `janitor` package because it is industry best practice to use `clean_names` for this purpose and it is simpler to use :)]]
+
+Here's the stringr cheatsheet: ***<https://github.com/rstudio/cheatsheets/blob/main/strings.pdf>***
+
+```{r strings, warning=F, message=F}
+?stringr
+
+# Read in the week parameter
+week = params$week
+
+# Import monkeypox dataset
+monkeypox <- read_csv(here(week, "module", "data", "monkeypox.csv")) %>%
+  clean_names()
+
+# Let us call a whole host of summary functions that can help us get a sense of our dataset
+head(monkeypox)
+str(monkeypox)
+nrow(monkeypox)
+names(monkeypox)
+```
+
+If we take a closer look at the symptoms variable, we can see that there are some entries where are more than one symptoms listed, where each are separated by a comma. 
+
+```{r strings 2, warning=F, message=F}
+
+# Call unique values from symptoms variable in monkeypox dataset
+unique(monkeypox$symptoms)
+
+# Let us make a simple frequency table of all of the values in the symptoms variable in the dataset
+table(monkeypox$symptoms)/nrow(monkeypox) 
+# Let us also take a look of what proportion of dataset simply lacks information on symptoms, just out of curiosity
+nrow(monkeypox %>% filter(is.na(symptoms)))/nrow(monkeypox)
+```
+
+One problem we face is that there can be multiple symptoms captured in one text, which may be problematic when trying to use this data for modelling -- the principle of tidy data is violated (more than one variable worth of information captured in one). As a solution, we can use string methods to detect and extract each of the symptoms and assign them to binary indicator variables (also known as dummy variables) to make the data more legible and easier to work with for both visualization and further analysis.
+
+Here are some useful functions (out of _many_, so we highly encourage you to explore the cheatsheet and documentation for all possibilities with stringr):
+
+- `str_detect`: Detect the presence of a pattern match in a string
+- `str_count`: Count the number of matches in a string
+- `str_subset`: Return only the strings that contain a pattern match
+- `str_replace`: Replace the first matched pattern in each string with replacement string
+
+There's a few `stringr` functions that can help us, but first let's build off of what we know with `if_else(condition, if TRUE, if FALSE)` [NOTE - we updated this part from the accompanying video which uses the BaseR `ifelse` function because the `if_else` function in `dplyr` is more robust :)] and use the function `str_detect`, which returns `True`/`False` given a value contains a string or pattern that we specify.
+
+Let's first create an indicator variable for whether a patient experienced **fever** as a symptom, marking `1` for `Yes` and `0` for `No`. We can assign this to a variable called _fever_.
+
+```{r strings 3, warning=F, message=F}
+#Call documentation
+?str_detect
+
+# In plain words: to the same monkeypox dataset, we add a new variable that assigns 1 if the symptoms variable has the string "fever" in it and 0 if not.
+monkeypox_sx <- monkeypox %>%
+  mutate(fever = if_else(str_detect(string = symptoms, pattern = "fever"), true = 1, false = 0)) 
+
+# Of those who did have recorded symptoms, how many had a fever? Here we get the number of rows for those who had fever == 1, divided by all observations that had any non-NA value for the fever indicator variable (and by extension anyone who has reported symptoms)
+nrow(monkeypox_sx %>% filter(fever == 1)) / nrow(monkeypox_sx %>% filter(is.na(fever) == F))
+
+```
+
+That's great! You can play around to extract different symptoms and make indicator variables for each one. In truth, there are ways to better formalize this process such that you don't need to specify every single unique string and instead ask R to identify all unique strings, cycle through, and create indicator variables for each. This is a bit out of scope for this course (if you are curious, you can look up documentation for _"one-hot encoding in R"_), but in this next code chunk we'll go through extracting these unique strings so that we know all of the possible indicator variables we could create using the the `purrr` package from the `tidyverse`.
+
+```{r strings 4, warning=F, message=F}
+# Split each observation for the symptoms variable at commas
+symptoms_list <- str_split(string = monkeypox$symptoms, 
+                           pattern = ",")
+# Take a peek
+head(symptoms_list, 10)
+
+# Load purrr package
+library(purrr)
+
+# Convert the list of lists into one list
+symptoms_list <- purrr::flatten(symptoms_list)
+
+# Use string method to trim whitespace
+symptoms_list <- str_trim(symptoms_list)
+
+# Use string method to make all letters lowercase
+symptoms_list <- str_to_lower(symptoms_list)
+
+# Get unique values from final list/deduplicate
+unique(symptoms_list)
+```
+
+What if we wanted to create a variable in our dataset that indicates how many symptoms a patient had, if symptoms were reported? We can build off of the code above to count how many entries are in each list and assign it to a new variable called `symptoms_count`. For this, we employ the `lengths` function, which simply counts how many entries are in a list or similar object.
+
+```{r strings 5, warning=F, message=F}
+# Create a new variable that is the lengths of the symptoms variable once split by commas
+monkeypox_sx <- monkeypox %>%
+  mutate(symptoms_count = lengths(str_split(string = monkeypox$symptoms, 
+                                            pattern = ",")))
+
+# Take a peek of 10 rows after filtering out NAs and selecting the two relevant columns
+head(monkeypox_sx %>% filter(is.na(symptoms) == F) %>% 
+       select(symptoms, symptoms_count), 10)
+```
+
+**Regular expressions (Regex)**
+
+To round out our sojourn to the string-verse, we'd like to introduce/review the extremely powerful tool known as **regular expressions** (or **regex**) which are a sequence of characters we can use to identify patterns within text. 
+
+For example, to capture **any** phone number, one could employ this regex:
+
+[0-9]{3}-[0-9]{3}-[0-9]{4}
+
+It reads: 3 x any digit between 0-9, a dash, 3 x any digit between 0-9, another dash, and 4 x any digit between 0-9. Of course, you could customize this to fit different types of phone numbers, area codes, etc. 
+
+You can imagine how useful these methods can be combined with `stringr` functions (**regex** patterns can be specified into the "pattern" argument of `stringr` functions). Below, we'll show a brief example with a dataset of health-related tweets from the British Broadcasting Company (BBC). The dataset details and metadata can be viewed here: ***<https://www.kaggle.com/datasets/prabhavsingh/health-related-tweets>***
+
+Regex and string methods are definitely not a primary focus of this course, but as data extraction is integral to data visualization, it is important to know that these tools exist for your usage. To learn more about regex and how to use it, take a look at these useful resources:
+
+- stringr cheatsheet (page 2): ***<https://github.com/rstudio/cheatsheets/blob/main/strings.pdf>***
+- TDS blogpost about regex: ***<https://towardsdatascience.com/novice-to-advanced-regex-in-nine-minutes-or-less-6af45a1df8c8>***
+- regex cheatsheet: ***<https://cheatography.com/davechild/cheat-sheets/regular-expressions/>***
+- regex playground: ***<https://regex101.com/>***
+- like wordle, but for regex: ***<https://alf.nu/RegexGolf>***
+
+```{r strings regex, warning=F, message=F}
+# Import text data and set column names
+bbc <- read_delim("data/bbc.txt", 
+                  col_names = c("tweet_id", "datetime", "text"))
+
+# Take a look at the last 6 observations (tail is the opposite of head)
+tail(bbc)
+```
+
+First, let's take a look at a few string operations we can do with and without regex. Let's say we want to separate out the URL from each observation into a new column. We can do this **without** regex and just stringr methods by possibly splitting at the "http://" and taking all of the url after.
+
+```{r strings regex 2, warning=F, message=F}
+
+# There's a bit going on in this code, and sapply is out of scope for this course, but in plain words, we are first splitting the "text" variable into two strings -- one string between "http://" and one after. Then, we use sapply to select just the second string and assign it to a variable called "url". 
+bbc_url <- bbc %>%
+  mutate(url = c(sapply(str_split(text, pattern = "http://"), '[[', 2)))
+
+# Take a peek
+head(bbc_url %>% select(text, url))
+```
+
+Note that the above was done without regex -- our URL ends without the http://, which may be fine in this scenario but could be inconvenient for other instances. We can add it back in by using `str_c` (c for "concatenate") which you can explore in the stringr cheatsheet or documentation.
+
+Below, we'll take a look at how we can use regex for this problem.
+
+```{r strings regex 3, warning=F, message=F}
+# In plain words, we create a new variable url from the variable text that extracts the group that begins with http and any characters after -- ('.' matches any character and the '+' says to take up to an infinite number of characters)
+bbc_url <- bbc %>%
+  mutate(url = str_extract(text, 
+                           pattern = regex("(http.+)")))
+
+# Take a peek!
+head(bbc_url %>% select(text, url))
+```
+
+That's great! We got to avoid the admittedly abstract and messy usage of `sapply` to access a list of lists and instead could directly pull the entire URL. Regex is a powerful and necessary tool in that it both increases the flexibility of our existing toolset but also makes our code easier to read, understand, and maintain -- all hallmarks of good data wrangling.
+
+### Date data with lubridate
+
+Last but not least, we'll use the same dataset and string methods to extract the date from the `datetime` field and then use the `lubridate` package to operationalize date data such that R can understand it! This is extremely useful in longitudinal analyses and data visualization of temporal data.
+
+```{r dates, warning=F, message=F}
+# Take a peek at the datetime variable -- we see that the month is always the second string of three character
+head(bbc$datetime)
+
+# In plain words: we search each string in datemine for a first group of any characters ('\w') in a group of three ('{3}') and then capture the second group of the same pattern (denoted by the parentheses). This returns two columns (the overall match and then the capture group), so we use [,2] to take the second match.
+bbc_dates <- bbc %>%
+  mutate(month = str_match(string = datetime, 
+                           pattern = regex("[\\w]{3} (\\w{3}) "))[,2])
+
+# Lets do the same for day 
+bbc_dates <- bbc_dates %>%
+  mutate(day = str_match(string = datetime, 
+                         pattern = regex("[\\d]{2} "))[,1])
+
+# Since all observations were from 2015, we can just mutate a static 2015 for a year variable. Optional to try on your own: try to use regex to capture the year from the datetime variable.
+
+# Note that below is base R syntax (not using pipes). You can use whichever syntax (base R or tidyverse) you are most comfortable with, but it is worth mentioning moments when base R is quicker/more legible. Here, in plain words: the 'year' variable in bbc_dates dataframe will be assigned "2015" across the entire dataframe.
+bbc_dates['year'] = "2015"
+
+# Lets take a look at the three fields we just made:
+head(bbc_dates %>% select(-c("tweet_id", "text")))
+```
+
+Looks good! So for what purpose did we separate these three date components? We can use a package called `lubridate` to turn this into a **Date** variable type, which is distinct from character and numeric data, and is treated as true dates in R.
+
+Here's a lubridate cheatsheet: ***<https://rawgit.com/rstudio/cheatsheets/main/lubridate.pdf>***
+
+```{r dates 2, warning=F, message=F}
+# Lets use one last stringr function to concatenate the three date variables we made into a mmmddyyyy format
+bbc_dates <- bbc_dates %>%
+  mutate(new_date = str_c(month, " ", day, year))
+
+# Then, we can use a lubridate function 
+bbc_dates['new_date'] <- lubridate::mdy(bbc_dates$new_date)
+
+# Lets take a peek! Notice the 'new_date' has a <date> data type!
+head(bbc_dates %>% select(datetime, month, 
+                          day, year, new_date))
+
+```
+
+There's a lot of cool things we can do with this new true date field! `Lubridate` offers many accessors to pull out information, as seen below 
+
+Documentation for the `slice` family of functions from the `tidyverse` - https://dplyr.tidyverse.org/reference/slice.html
+
+```{r dates 3, warning=F, message=F}
+
+# Get day of the week for the first 6 rows of the dataset
+head(lubridate::wday(bbc_dates$new_date, label = TRUE))
+
+# Get the epidemiological week for the first 6 rows of the dataset
+head(lubridate::epiweek(bbc_dates$new_date))
+
+# Added how to do this with a `tidyverse` workflow
+bbc_dates %>%
+  mutate(
+    # Get day of the week using the `new_date` column 
+    wday    = lubridate::wday(new_date, label = TRUE),
+    # Get the epidemiological week using the `new_date` column
+    epiweek = lubridate::epiweek(new_date)
+  ) %>%
+  # `slice_head` allows to to just grab the top number of rows that you indicate from your dataframe (here it is 6)
+  slice_head(n = 6) %>% 
+  select(new_date, wday, epiweek)
+
+# Let's create an indicator variable if the tweet is a video
+bbc_dates <- bbc_dates %>%
+  mutate(video = if_else(str_detect(text, pattern = "VIDEO:"), 
+                        true = 1, 
+                        false = 0))
+
+# Using lubridate, let's make a week variable indicating what week of the year it is
+bbc_dates <- bbc_dates %>%
+  mutate(week = lubridate::week(new_date))
+
+# Using grouping and summarizing techniques we reviewed in the last module, we can group by week to find the number of videos per week and overall percent of tweets are videos in a given week. Note that we made a date field in the summarise function that takes the first date of each week group -- we would otherwise lose the date data, which is useful when plotting 
+bbc_week <- bbc_dates %>%
+  group_by(week) %>%
+  summarise(date = min(new_date),
+            sum_video = sum(video, na.rm = T),
+            perc_video = (sum(video, na.rm = T)/n())*100)
+
+# We can now plot this longitudinally! R recognizes the datefield as a valid x variable and treats it accordingly as a temporal scale.
+
+ggplot(data = bbc_week, aes(x = date, y = perc_video)) +
+  geom_bar(stat = "identity") +
+  labs(x = "Date",
+       y = "Percent (%) of all tweets",
+       title = "Trends of video tweets as a percentage of all health-related tweets by week (BBC, 2015)")
+```
+That brings us to the end of the dates section, which like the strings section, is wide-reaching and can be explored further through documentation and practice. Here's a challenge problem to try for the curious:
+
+Extract the hh:mm:ss data from the datetime field in the `bbc` dataset using `stringr` and **regex**. Extract an hour field and use it to create a new aggregate dataset grouped by hour and aggregating the number of video tweets. The final aggregate dataframe should be similar to `bbc_week` but at the hourly level and for video tweets.
+
+```{r dates ex, warning=F, message=F}
+
+bbc_hour <- bbc_dates %>%
+  mutate(hms = str_match(string = datetime, 
+                         pattern = regex("(\\d{2}:\\d{2}:\\d{2})"))[,2],
+         new_date = lubridate::ymd_hms(str_c(new_date, hms)),
+         hour = lubridate::hour(new_date)) %>%
+  group_by(hour) %>%
+  summarise(sum_video = sum(video, na.rm = T),
+            perc_video = (sum(video, na.rm = T)/n())*100)
+
+ggplot(data = bbc_hour, aes(x = hour, y = perc_video)) +
+  geom_bar(stat = "identity") +
+  labs(x = "Hour of day",
+       y = "Percent (%) of all tweets",
+       title = "Hourly trends of video tweets as a percentage of all health-related tweets (BBC, 2015)")
+```
+
+Congrats! You have successfully completed the `String and Dates Module`! Feel free to keep exploring these methods or knit the document for your reference.

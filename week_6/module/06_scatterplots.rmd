@@ -1,0 +1,471 @@
+---
+title: "Module: Scatterplots"
+subtitle: "PHW251B: Data Visualization for Public Health"
+author: 
+  - "Andrew Nguyen"
+  - "Ilya Moskalenko"
+params:
+  week: "week_6"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, echo = FALSE, warning=F, message=F}
+library(tidyverse)
+library(here)
+library(formatR)
+library(janitor)
+
+knitr::opts_chunk$set(echo = TRUE, tidy = TRUE, tidy.opts = list(width.cutoff = 85))
+```
+
+## Introduction
+
+Welcome to the PHW251B module for scatterplots! In our proverbial toolkit of visualizations, scatterplots fill in the gap for displaying the relationship between two continuous numerical variables. These two variables are plotted on two axes and compared against one another. Common examples of relationships that are commonly plotted using scatterplots include height and weight, temperature and PM2.5, time series and mortality, a country's % of GDP invested into social services and healthcare, and so on. 
+
+A few notes: 
+
+- This module is complemented by `Exercise 2` for this week and you are going to be prompted to navigate to `exercise_2/06_exercise-2.Rmd` when it is appropriate to to complete **Questions 1, 2, and 3**.
+- Conventionally, the two variables are listed as the explanatory variable (the 'x') first and dependent variable (the 'y') second, as above.
+- It is important that both variables are on similar scales, or can be scaled such that they have similar granularity. This is best explained in examples, but imagine if your explanatory variable is continuous but only had 5 distinct levels (say, 0-5) and your dependent variable spanned 200 levels, you may be better served with a different visualization (e.g. bar chart).
+
+## Objectives
+
+- Utilize `ggplot2` and `geom_point` to create scatterplots
+- Change the color, transparency, size, and style of points
+- Add a line of best fit using `geom_smooth`
+- Add reference lines 
+- Modify graph labels, legend, and titles, and styles
+- Translate scatterplots to line plots
+
+
+Please consider referencing the `ggplot2` cheatsheet throughout this module and for your future plotting needs. It is available here: <https://github.com/rstudio/cheatsheets/blob/main/data-visualization-2.1.pdf>
+
+Other resources that are aligned with this module include:
+
+- R4DS: Chapter 3
+
+## The Data
+
+Today, we will be using a new dataset `healthy_cities_2021`, hosted by Kaggle: ***<https://www.kaggle.com/datasets/prasertk/healthy-lifestyle-cities-report-2021>***
+
+This dataset describes metrics of the 44 cities considered to the "happiest" in the world, drawing upon different sociodemographic and geographic data. The variables include:  
+
+- Sunshine hours (city specific)
+- Cost of a bottle of water (city specific)
+- Obesity levels (country specific)
+- Life expectancy, in years (country specific)
+- Pollution, aggregate index score (city specific)
+- Annual average hours worked (country specific)
+- Happiness levels (country specific)
+- Outdoor activities (city specific)
+- Number of takeout places (city specific)
+- Cost of a monthly gym membership (city specific)
+
+As with all data sourced from the internet, discretion and caution should be used in both understanding robustness/veracity of datasets and interpreting findings from them. 
+
+**Let's get started!**
+
+As can be surmised from the variable names, there is a wealth of continuous data that could be plotted against one another to investigate possible relationships. 
+
+Let's investigate the relationship between hours of `sunshine` and `happiness levels`, drawing upon previous modules to first do some data cleaning exploratory data analysis.
+
+```{r load data, message=F, warning=F}
+# Import data
+cities <- read_csv(here(week, "data", "healthy_cities_2021.csv")) %>%
+  clean_names() # Replaced - rename_with(~ tolower(gsub(" ","_", .x, fixed=TRUE)))
+
+# Look at the structure of the dataset
+str(cities)
+```
+
+You may notice that there's a lot of data cleaning to be done before this dataset can be visualized properly. This will be done below for you, with explanations attached. With the earlier modules, these steps should be familiar / make sense to you, or at least make enough sense such that a documentation call or Google search can clear up any confusion! As always, do not hesitate to reach out for additional explanation or support. However, we won't focus on the data cleaning aspect for these plot-centric modules.
+
+Here, we do some work to rename variables, remove pesky characters in what should be numeric variables, and then converting said variables to numeric ones. [**Note** - This code chunk was updated to align with the column names that were automatically read in using `clean_names`]
+
+```{r data cleaning, message=F, warning=F, echo=F}
+
+cities_clean <- cities %>%
+  # Rename dataset columns
+  rename(
+    hours_sun = "sunshine_hours_city",
+    water_cost = "cost_of_a_bottle_of_water_city",
+    obesity = "obesity_levels_country",
+    life_exp = "life_expectancy_years_country",
+    pollution_score = "pollution_index_score_city",
+    avg_hours_worked = "annual_avg_hours_worked",
+    happiness_level = "happiness_levels_country",
+    outdoor_activities = "outdoor_activities_city",
+    number_takeout = "number_of_take_out_places_city",
+    gym_cost = "cost_of_a_monthly_gym_membership_city") %>%
+  # Replace "-" with NA in hours_sun column, otherwise leave as is
+  mutate(
+    hours_sun = if_else(hours_sun == "-", true = NA, false = hours_sun),
+         # Convert hours_sun column to numeric column
+         hours_sun = as.numeric(hours_sun),
+         # Remove "£" in water_cost column
+         water_cost = str_remove(string = water_cost, pattern = "£"),
+         # Convert water_cost column to numeric column
+         water_cost = as.numeric(water_cost),
+         # Remove "%" in obesity column
+         obesity = str_remove(string = obesity, pattern = "%"),
+         # Convert obesity column to numeric column
+         obesity = as.numeric(obesity),
+         # If pollution_score column has "-", replace with NA, leave as is otherwise
+         pollution_score = if_else(pollution_score == "-", true = NA, false = pollution_score),
+          # Convert pollution_score column to numeric column
+          pollution_score = as.numeric(pollution_score),
+          # If avg_hours_worked column has "-", replace with NA, leave as is otherwise
+          avg_hours_worked = if_else(avg_hours_worked == "-", true = NA, false = avg_hours_worked),
+          # Convert avg_hours_worked column to numeric column
+          avg_hours_worked = as.numeric(avg_hours_worked),
+          # Remove "£" in gym_cost column
+          gym_cost = str_remove(string = gym_cost, pattern = "£"),
+          # Convert gym_cost column to numeric column
+          gym_cost = as.numeric(gym_cost))
+          
+ # Now we're ready to work with the data!
+
+```
+
+Now that we have cleaned the data, we can look at some summary statistics to understand the center and spread of our data.
+
+```{r eda, warning=F, message=F}
+# Mean, median, and sd for hours of sunshine, noting that we remove NA values
+mean(cities_clean$hours_sun, na.rm = T)
+median(cities_clean$hours_sun, na.rm = T)
+sd(cities_clean$hours_sun, na.rm = T)
+
+# Mean, median, and sd for happiness levels, noting that we remove NA values
+mean(cities_clean$happiness_level, na.rm = T)
+median(cities_clean$happiness_level, na.rm = T)
+sd(cities_clean$happiness_level, na.rm = T)
+```
+
+Summary statistics can give us quick points about the distribution of our data, but sometimes it's easier to see the directionality and spread using graphs and plots. Since both variables are continuous, scatterplots are helpful in ascertaining a relationship among them (if any).
+
+Here's the basic `ggplot2` structure:
+
+`ggplot(data = <DATA>, mapping = aes(<MAPPINGS>)) + <GEOM_FUNCTION>()`
+
+And here it is with our data. The specific `geom_function` we are using is `geom_point`, which intuitively plots points:
+
+```{r first plot, warning=F, message=F}
+#remember to call up documentation with `?` before the function call!
+?ggplot
+?geom_point
+
+#plot using ggplot format
+ggplot(data = cities_clean, mapping = aes(x = hours_sun, y = avg_hours_worked)) +
+  geom_point()
+```
+
+## Change the color, transparency, size, and style of points
+
+In this section, we'll go over different `aes()` aesthetics that can go within the `geom_point()` call. An important concept to know is that ggplot2 can accept static (i.e. a single number or color) or dynamic arguments to these aesthetics (i.e. numbers from a column, colors based on a category).
+
+**An important note:**
+
+If we want to call a dynamic aesthetic (say, a color that is dependent on another variable and not just a static hex code), we would place the argument within `aes()`. If it is static, however, it can exist outside the `aes()` argument.
+
+You can check out different point shapes here: <http://www.sthda.com/english/wiki/ggplot2-point-shapes>
+
+```{r point styles}
+# Change the size of the points using the recipricol of the rank variable, so that the happiest cities have the largest points
+ggplot(data = cities_clean, mapping = aes(x = hours_sun, y = avg_hours_worked)) +
+  geom_point(aes(size = 1/rank))
+
+# What if we call the same dynamic size argument outside of aes(), like below? It won't run!
+
+# Try uncommenting the two lines below and running it! You'll receive an error, and make sure to re-uncomment it out before knitting :)
+
+# ggplot(data = cities_clean, mapping = aes(x = hours_sun, y = avg_hours_worked)) +
+#   geom_point(size = 1/rank)
+
+# But it will run a static size argument just fine:
+ggplot(data = cities_clean, mapping = aes(x = hours_sun, y = avg_hours_worked)) +
+  geom_point(size = 5)
+
+# Lets also change the color by obesity level (country level)
+ggplot(data = cities_clean, mapping = aes(x = hours_sun, y = avg_hours_worked)) +
+  geom_point(aes(size = 1/rank,
+                 color = obesity))
+
+# Here, let's instead change the alpha (transparency) of the dots, which is a value from 0 (completely transparent) to 1 (opaque)
+#note that this is not done within the aes() argument, and can exist outside
+ggplot(data = cities_clean, mapping = aes(x = hours_sun, y = avg_hours_worked)) +
+  geom_point(alpha = 0.5)
+
+# What happens if we do it in the aes argument?
+ggplot(data = cities_clean, mapping = aes(x = hours_sun, y = avg_hours_worked)) +
+  geom_point(aes(alpha = 0.5))
+# This creates a legend entry, which you may or may not want -- this is a point of consideration and choice!
+```
+
+---
+
+\newpage
+
+### Question 1 
+
+Please navigate to the `exercise_2/06_exercise-2.Rmd` file and complete **Question 1** there. As a reminder `06_exercise-2.Rmd` is designed to complement the flow of this module!
+
+\newpage
+
+---
+
+The resulting plot isn't exactly informative, is it? There's likely other variables that can better capture the intricate relationship (if any) between hours of sunlight, obesity levels, and gym membership costs. 
+
+## Add a line of best fit using `geom_smooth`
+
+Sometimes the clarity of your scatterplots can be improved with the use of line of best fits, that utilize an equation to fit itself to the points (think regression lines). A line of best fit can generalize the direction of your data's relationship. `ggplot` has many options to what lines we can fit, and defaults to local regression/LOESS for samples sizes smaller than 1,000, and adds bands around standard errors. You can read more about it here: <https://ggplot2.tidyverse.org/reference/geom_smooth.html>
+
+Note that we still follow the ggplot format by adding another `geom_function()` call to our existing code!
+
+```{r lines of best fits}
+?geom_smooth()
+
+# Plot the data, and add line of best fit
+ggplot(data = cities_clean, mapping = aes(x = hours_sun, y = avg_hours_worked)) +
+  geom_point() +
+  geom_smooth()
+
+# Plot the data, and add line of best fit, but removing standard errors
+ggplot(data = cities_clean, mapping = aes(x = hours_sun, y = avg_hours_worked)) +
+  geom_point() +
+  geom_smooth(se = FALSE)
+
+# Plot the data, and add line of best fit, specify 0.90 confidence level for interval (0.95 is default)
+ggplot(data = cities_clean, mapping = aes(x = hours_sun, y = avg_hours_worked)) +
+  geom_point() +
+  geom_smooth(level = 0.90)
+
+# Note that you can add styles to your geom_smooth object too!
+ggplot(data = cities_clean, mapping = aes(x = hours_sun, y = avg_hours_worked)) +
+  geom_point() +
+  geom_smooth(level = 0.9, color = "red", fill = "green")
+```
+
+## Add reference lines with geom_vline(), geom_hline(), and geom_abline()
+
+These geom_functions are not specific to scatterplots and can be applied to all `ggplot` objects. 
+- geom_vline(): is used for vertical lines, or ones on the x-axis
+- geom_hline(): used for horizontal lines, or ones on the y-axis
+- geom_abline(): used with a slope and intercept 
+
+```{r reference lines}
+?geom_abline
+
+# Plot the data, and add line of best fit, and a reference line with slope 0.35 and intercept 900
+ggplot(data = cities_clean, mapping = aes(x = hours_sun, y = avg_hours_worked)) +
+  geom_point() +
+  geom_smooth() +
+  geom_abline(slope = 0.35, intercept = 900, color = "red")
+
+# Plot the data, and add line of best fit, and a horizontal reference line at y = 2000
+ggplot(data = cities_clean, mapping = aes(x = hours_sun, y = avg_hours_worked)) +
+  geom_point() +
+  geom_smooth() +
+  geom_hline(yintercept = 2000, color = "red")
+
+# Plot the data, and add line of best fit, and a vertical reference line at x = 3000
+ggplot(data = cities_clean, mapping = aes(x = hours_sun, y = avg_hours_worked)) +
+  geom_point() +
+  geom_smooth() +
+  geom_vline(xintercept = 3000, color = "red")
+
+# We can make these interactive in how we create reference lines that correspond to our data!
+# We can directly call the mean of the x-variable to get a vertical reference line
+ggplot(data = cities_clean, mapping = aes(x = hours_sun, y = avg_hours_worked)) +
+  geom_point() +
+  geom_smooth() +
+  geom_vline(xintercept = mean(cities_clean$hours_sun, na.rm = T), color = "red")
+```
+
+---
+
+\newpage
+
+### Question 2 
+
+Please navigate to the `exercise_2/06_exercise-2.Rmd` file and complete **Question 2** there. As a reminder `06_exercise-2.Rmd` is designed to complement the flow of this module!
+
+\newpage
+
+---
+
+## Modify graph labels, legend, and titles, and styles
+
+These consititute plot essentials - titles, the legend, and data labels. Plot styles are optional but can further elevate your visualizations with minimal time and effort.
+
+Here, we go over:
+
+- titles
+- data labels
+- themeing plots
+- turning legend on/off
+
+```{r modify plots}
+# Take the previous graph, and add title and axes labels
+ggplot(data = cities_clean, mapping = aes(x = hours_sun, y = avg_hours_worked)) +
+  geom_point() +
+  geom_smooth() +
+  geom_vline(xintercept = mean(cities_clean$hours_sun, na.rm = T), color = "red") +
+  labs(title = "Happiest cities: hours of sun versus. average hours worked",
+       x = "Hours of sun, yearly",
+       y = "Average hours worked, yearly",
+       caption = "data source: Kaggle")
+
+?geom_label()
+
+# Add data labels to each data point, change the size of labels based on a city's rank (larger means it ranks higher)
+ggplot(data = cities_clean, mapping = aes(x = hours_sun, y = avg_hours_worked)) +
+  geom_point() +
+  geom_smooth() +
+  geom_label(label = cities_clean$city, aes(size = 1/rank)) +
+  geom_vline(xintercept = mean(cities_clean$hours_sun, na.rm = T), color = "red") +
+  labs(title = "Happiest cities: hours of sun versus. average hours worked",
+       x = "Hours of sun, yearly",
+       y = "Average hours worked, yearly",
+       caption = "data source: Kaggle")
+
+# Note that we can turn off the legend by accessing the theme() function and specifying "none" for legend position
+ggplot(data = cities_clean, mapping = aes(x = hours_sun, y = avg_hours_worked)) +
+  geom_point() +
+  geom_smooth() +
+  geom_label(label = cities_clean$city, aes(size = 1/rank)) +
+  geom_vline(xintercept = mean(cities_clean$hours_sun, na.rm = T), color = "red") +
+  labs(title = "Happiest cities: hours of sun versus. average hours worked",
+       x = "Hours of sun, yearly",
+       y = "Average hours worked, yearly",
+       caption = "data source: Kaggle") +
+  guides(size = "none")
+
+
+# Add a different premade theme to your plot, common choices include _minimal(), _classic(), and _dark. Be sure to check out online documentation for all available themes.
+
+# Classic theme
+ggplot(data = cities_clean, mapping = aes(x = hours_sun, y = avg_hours_worked)) +
+  geom_point() +
+  geom_smooth() +
+  geom_label(label = cities_clean$city, aes(size = 1/rank)) +
+  geom_vline(xintercept = mean(cities_clean$hours_sun, na.rm = T), color = "red") +
+  labs(title = "Happiest cities: hours of sun versus. average hours worked",
+       x = "Hours of sun, yearly",
+       y = "Average hours worked, yearly",
+       caption = "data source: Kaggle") +
+  theme_classic() +
+  theme(legend.position = "none")
+
+# Minimal theme
+ggplot(data = cities_clean, mapping = aes(x = hours_sun, y = avg_hours_worked)) +
+  geom_point() +
+  geom_smooth() +
+  geom_label(label = cities_clean$city, aes(size = 1/rank)) +
+  geom_vline(xintercept = mean(cities_clean$hours_sun, na.rm = T), color = "red") +
+  labs(title = "Happiest cities: hours of sun versus. average hours worked",
+       x = "Hours of sun, yearly",
+       y = "Average hours worked, yearly",
+       caption = "data source: Kaggle") +
+  theme_minimal()  +
+  theme(legend.position = "none")
+```
+
+## Translating to line plots!
+
+As discussed in lecture, plots can serve the same data if they are attempting to visualize same marks and spatial channels. Line plots, like scatterplots, are good for visualizing two quantitative variables, and are often paired together. While we showed smoothed regression lines / lines-of-best-fit above, line plots connect each unique data point in a series to one another, and do not undergo any smoothing. They're great for showing direct change or time, or changes between groups (think pre- and post-intervention).
+
+For this, we'll go back to the `gapminder` library and dataset that we have utilized throughout this course.
+
+`geom_line` can access the same aesthetics like `color`, `fill`, `size`, and a specific property called `linetype`, which it shares with `geom_smooth` and other line-based geoms. This property has the following options:
+
+- 'solid'
+- 'dashed'
+- 'dotted'
+- 'dotdash'
+- 'longdash'
+- 'twodash'
+
+Here are some helpful online resources that expand on documentation:
+
+- <http://www.sthda.com/english/wiki/ggplot2-line-plot-quick-start-guide-r-software-and-data-visualization>
+
+
+You'll find that the syntax is generally the same:
+
+```{r line plots}
+
+library(gapminder)
+gapminder <- gapminder::gapminder
+
+# We take the gapminder data and groupby year and continent, and then get the mean life exp for each continent each year, then graph it with geom_line
+ggplot(data = gapminder %>% group_by(year, continent) %>% summarise(lifeExp = mean(lifeExp, na.rm = T)), aes(x = year, y = lifeExp)) +
+  geom_line(aes(color = continent))
+  
+# With geom_points at each data point
+ggplot(data = gapminder %>% group_by(year, continent) %>% summarise(lifeExp = mean(lifeExp, na.rm = T)), aes(x = year, y = lifeExp)) +
+  geom_line(aes(color = continent)) +
+  geom_point()
+
+# Adjust the size of the line
+ggplot(data = gapminder %>% group_by(year, continent) %>% summarise(lifeExp = mean(lifeExp, na.rm = T)), aes(x = year, y = lifeExp)) +
+  geom_line(aes(color = continent), size = 1.5) +
+  geom_point()
+
+?geom_line
+
+# Change the linetype for all data
+ggplot(data = gapminder %>% group_by(year, continent) %>% summarise(lifeExp = mean(lifeExp, na.rm = T)), aes(x = year, y = lifeExp)) +
+  geom_line(aes(color = continent), linetype = "dashed") +
+  geom_point()
+
+# Change the linetype by continent (remember that it will go in the aes() property if determined by-variable)
+ggplot(data = gapminder %>% group_by(year, continent) %>% summarise(lifeExp = mean(lifeExp, na.rm = T)), aes(x = year, y = lifeExp)) +
+  geom_line(aes(color = continent, linetype = continent), arrow = arrow(length = unit(0.25, "cm"))) +
+  geom_point()
+```
+
+## Bonus: line plots and arrows
+
+Sometimes, we can accentuate trends of data over time by adding elements like arrows to our line plots. Luckily, we can easily add arrows in `ggplot2` using the `arrow` property and function. This is not an exhaustive exploration by any means -- feel free to check out online documentation to further explore options.
+
+```{r arrows}
+# Take our previous plot without points, and adding arrow function that just describes size of arrow head
+ggplot(data = gapminder %>% group_by(year, continent) %>% summarise(lifeExp = mean(lifeExp, na.rm = T)), aes(x = year, y = lifeExp)) +
+  geom_line(aes(color = continent, linetype = continent), arrow = arrow(length = unit(0.25, "cm")))
+
+# Changing the size of the arrow head
+ggplot(data = gapminder %>% group_by(year, continent) %>% summarise(lifeExp = mean(lifeExp, na.rm = T)), aes(x = year, y = lifeExp)) +
+  geom_line(aes(color = continent, linetype = continent), arrow = arrow(length = unit(0.5, "cm")))
+
+# Having arrows point both ways
+ggplot(data = gapminder %>% group_by(year, continent) %>% summarise(lifeExp = mean(lifeExp, na.rm = T)), aes(x = year, y = lifeExp)) +
+  geom_line(aes(color = continent, linetype = continent), arrow = arrow(length = unit(0.25, "cm"), ends = "both"))
+
+# Smaller angle argument makes pointier arrows
+ggplot(data = gapminder %>% group_by(year, continent) %>% summarise(lifeExp = mean(lifeExp, na.rm = T)), aes(x = year, y = lifeExp)) +
+  geom_line(aes(color = continent, linetype = continent), arrow = arrow(length = unit(0.25, "cm"), angle = 25))
+
+# Large angle argument makes flatter arrows
+ggplot(data = gapminder %>% group_by(year, continent) %>% summarise(lifeExp = mean(lifeExp, na.rm = T)), aes(x = year, y = lifeExp)) +
+  geom_line(aes(color = continent, linetype = continent), arrow = arrow(length = unit(0.25, "cm"), angle = 45))
+
+# Changing the arrow type to a closed type
+ggplot(data = gapminder %>% group_by(year, continent) %>% summarise(lifeExp = mean(lifeExp, na.rm = T)), aes(x = year, y = lifeExp)) +
+  geom_line(aes(color = continent, linetype = continent), arrow = arrow(length = unit(0.25, "cm"), type = "closed"))
+```
+
+---
+
+\newpage
+
+### Question 3 
+
+Please navigate to the `exercise_2/06_exercise-2.Rmd` file and complete **Question 3** there. As a reminder `06_exercise-2.Rmd` is designed to complement the flow of this module!
+
+\newpage
+
+---
+
+Congrats! You've made it to the end of this module. Feel free to continue exploring online documentation for more creative ways to display quantitative data. 

@@ -1,0 +1,90 @@
+---
+title: "Exercise 2: Scatterplots"
+subtitle: "PHW251B: Data Visualization for Public Health"
+author: 
+  - "Andrew Nguyen"
+  - "Ilya Moskalenko"
+params:
+  week: "week_6"
+output:
+  word_document: default
+---
+
+\newpage
+
+# Rmd setup
+
+```{r setup, echo = FALSE, warning=F, message=F}
+library(tidyverse)
+library(here)
+library(formatR)
+library(janitor)
+
+knitr::opts_chunk$set(echo = TRUE, tidy = TRUE, tidy.opts = list(width.cutoff = 85))
+```
+
+\newpage
+
+# Instructions
+
+## Submission 
+
+Please knit your file as a **Word Document** and submit your assignment to **Gradescope**.
+
+## Tips 
+
+  - The questions in **Exercise 2** are meant to complement `Module: Scatterplots` in `Week 6`. The `Module: Scatterplots` is going to have placeholders that are going to point you to complete questions in **Exercise 2** to practice the skills from the module.
+  
+  - **Exercise 2** is going to use the `healthy_cities_2021_clean.csv` dataset that we cleaned in `Module: Scatterplots`
+
+  - Please make sure to double check that your code does not run off the page in your knitted **Word Document**. To fix this issue, go back to your code, and add new lines in your code by hitting enter so that part of the code chunk is on another line. 
+
+# Read in clean data from `Module: Scatterplots`
+
+```{r load data, message=F, warning=F}
+# Week object
+week = params$week
+
+# Import data
+data <- read_csv(here(week, "data", "healthy_cities_2021_clean.csv")) %>%
+  clean_names() # Replaced - rename_with(~ tolower(gsub(" ","_", .x, fixed=TRUE)))
+
+
+# Look at the structure of the dataset
+str(data)
+```
+
+\newpage
+
+# Question 1 
+
+Let's try combine some of these aesthetics from `Module: Scatterplots`! Let's create a new plot from the `cities_clean` dataset displaying the relationship between `hours_sun` and `obesity`. Let's also set the alpha to be responsive to `gym_cost` to display a third variable.
+
+```{r}
+# Type your answer here
+
+```
+
+\newpage
+
+### Question 2
+
+Let's take moment to explore the options with lines of best fit. Take a look at the documentation for `geom_smooth` and find and implement the argument for the LOESS method. Then, create a **horizontal** reference line at the 90th percentile of `avg_hours_worked`.  (Hint - use `?geom_smooth`)
+
+```{r}
+# Type your answer here
+
+```
+
+\newpage
+
+### Question 3
+
+From what we've covered in `Module: Scatterplots`, let's make a plot with the `data` dataframe that we imported at the beginning of, as seen before, where we plot `hours_sun` against `avg_hours_worked`, with each city labeled and the size of labels determined by rank (a better rank making a bigger label). Let's go a step further and symbolize the data labels of each city by a different color. Further, let's remove the confidence intervals. If you want, take a look at the documentation for `geom_text` and see if there's an argument to remove overlapping labels. Finally, remember to apply the classic theme. (Hint - use `?geom_text` and look into the `ggrepel` function from the `ggrepel` package)
+
+```{r}
+# Type your answer here
+
+```
+
+Congrats! You've made it to the end of this module. Feel free to continue exploring online documentation for more creative ways to display quantitative data. 

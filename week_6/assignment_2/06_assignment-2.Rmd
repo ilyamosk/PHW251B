@@ -1,0 +1,262 @@
+---
+title: 'Assignment 2: Continuous Data'
+subtitle: 'PHW251B: Data Visualization for Public Health'
+author: "YOUR NAME HERE"
+date: "`r format(Sys.time(), '%m-%d-%Y', tz = 'America/Los_Angeles')`"
+output:
+  word_document: default
+params:
+  week: week_6
+---
+
+```{r setup, echo = FALSE, warning=F, message=F}
+library(formatR)
+library(tidyverse)
+knitr::opts_chunk$set(echo = TRUE, tidy = TRUE, warning = F, message = F, tidy.opts = list(width.cutoff = 85))
+
+# Load libraries
+library(NHANES)
+library(tidyverse)
+```
+
+\newpage  
+
+## Introduction
+
+Hello and welcome back to `PHW251B - Data Visualization for Public Health`! This RMarkdown document will serve as your second coding assignment this semester, meaning that you will complete the assignment to your best of your ability, knit the file, and then submit it to bCourses. Please feel free to post to Ed Discussion with any questions. 
+
+Before completing this assignment, it is highly recommended that you look over **Lectures for Week 5 and 6** and complete **Module: Scatterplots** as well as the complementary **Exercise 2**, all of which provides some worked-through examples of visualizing two continuous variables as scatterplots and line plots. For this RMarkdown, we'll be going through an **exploratory data analysis** process, where we intake untidy data, clean it, and then create both tabular and visual summaries to glean some information from the data for further analysis. We'll walk you through the beginning portions to demonstrate what this process would look like, and you will be tasked with creating some plots throughout and at the end!
+
+## Submission 
+
+Please knit your file as a **Word Document** and submit your assignment to **Gradescope**.
+
+\newpage
+
+## The Data
+
+In this assignment, we'll be using data from the US National Health and Nutrition Examination Study, or NHANES, a renowned serial cross-sectional survey that records anthropometric and health-related indicators from participants. This specific subset of the NHANES dataset is procured using the `NHANES` library and is of the 2009-2010 and 2011-2012 sample years. 
+
+A note of caution: NHANES is not nationally-representative, and actually *oversamples* individuals from racial/ethnic minorities. Analyzing the dataset as is through statistical/inferential modeling without accounting for these sampling nuances will lead to biased estimates and approximations.
+
+You can read more about NHANES here: [link]<https://www.cdc.gov/nchs/nhanes/index.htm?CDC_AA_refVal=https%3A%2F%2Fwww.cdc.gov%2Fnchs%2Fnhanes.htm>
+
+Here are some variables that may of interest - 
+
+| `Original Column` | `Cleaned Column   | Description`                                                                                              |
+|-------------------|-------------------------------------------------------------------------------------------------------------------------------|
+| `Gender`          | `gender`          | Gender (sex) of study participant coded as male or female                                                 |
+| `Age`             | `age`             | Age in years at screening of study participant. Subjects 80+ are recorded as 80                           |
+| `Race1`           |	`race1``          | Reported race of study participant - Mexican, Hispanic, White, Black, or Other                            |
+| `Education`       | `education`       | Educational level of study participant, reported for those 20+                                            |
+| `HHIncome`        |	`hh_income`       | Total annual gross income for the household in US dollars                                                 |
+| `Poverty`         |	`poverty`         | A ratio of family income to poverty guidelines. Smaller numbers indicate more poverty                     |
+| `HomeRooms`       |	`home_rooms`      | How many rooms are in home of study participant                                                           |
+| `HomeOwn`	        | `home_own`        | Status of home ownership - Home (owning home), Rent, or Other                                             |
+| `Weight`          | `weight`          | Weight in kg                                                                                              |
+| `Length`          | `length`          | Recumbent (laying down) length in cm                                                                      |
+| `Height`          |	`height`          | Standing height in cm                                                                                     |
+| `BMI`             | `bmi`             | Body mass index (weight/height2 in kg/m2)                                                                 |
+| `Pulse`           |	`pulse`           | 60 second pulse rate                                                                                      |
+| `BPSysAve`        |	`bp_sys_ave`      | Combined systolic blood pressure reading, following the procedure outlined for BPXSAR                     |
+| `BPDiaAve`        |	`bp_dia_ave`      | Combined diastolic blood pressure reading, following the procedure outlined for BPXDAR                    |
+| `Testosterone`	  | `testosterone`    | Testosterone total (ng/dL). Reported for participants aged 6 years or older (Not available for 2009-2010) |
+| `DirectChol`      | `direct_chol`     | Direct HDL cholesterol in mmol/L                                                                          |
+| `TotChol`         | `tot_chol`        | Total HDL cholesterol in mmol/L                                                                           |
+| `Diabetes`        |	`diabetes`        | Binary indicator for the diabetes status                                                                  |
+| `nPregnancies`    | `n_pregnancies`   | How many times participant has been pregnant (Reported for female participants aged 20+)                  |
+| `nBabies`         |	`n_babies`        | How many of participants deliveries resulted in live births (Reported for female participants aged 20+)   |
+| `SleepHrsNight`   |	`sleep_hrs_night` | Self-reported number of hours study participant usually gets at night on weekdays or workdays             |
+
+There's many more variables! As always, you can call up more documentation with `?NHANES`
+
+```{r nhanes, echo = F}
+
+# Call up documentation
+?NHANES
+
+# Assign clean NHANES data to dataframe called "data"
+data <- NHANES::NHANES %>% 
+  clean_names()
+```
+
+\newpage
+
+## Exploratory Data Analysis
+
+When one first approaches analyzing new or updated data, we often want to create summaries and general findings before we dive into statistical testing or modeling!  
+
+There's many frameworks for thorough, sustainable, and reproducible exploratory data analysis. In general, we want to look for the following key data properties (materials based on Data 100: Principles and Techniques of Data Science, here at UC Berkeley) [link]<https://ds100.org>
+
+- **Structure**: the "shape" of the data
+- **Granularity**: how coarse or fine is each observation? What does one observation entail?
+- **Scope**: how complete (or incomplete) is the data?
+- **Temporality**: how does time relate to the data?
+- **Faithfulness**: how well does the data reflect reality?
+
+Let's establish these properties before diving into continuous univariate and bivariate plots. 
+
+### Structure
+
+```{r structure}
+#calls the dimensions of data
+dim(data)
+```
+
+The `dim` function tell us the **rows** (10000) and **columns** (76) of the dataframe.
+
+### Granularity 
+
+Here, we can use the `unique` function that we learned a few modules ago, and use the `length` function to see how many rows we have with the input. If we get the length of unique rows in what is supposed to be a uniquely-identifying variable (in this case, the ID variable), then we can compare to the total number of rows in the dataset to get a sense of granularity. 
+
+```{r granularity}
+#get the number of unique values in the ID variable of the dataset
+length(unique(data$ID))
+```
+
+There's 6779 unique values in the ID field, when there's 10000 observations in the total dataset! This could mean several things -- that perhaps each observation *is* unique but needs another identifying variable (say, for example, `SurveyYr`) in combination. 
+
+If you take a deeper dive into the metadata, you'll find that this dataset has been weighted in certain ways to be demographically representative of the United States, or that it can act as a simple random sample (SRS). That means observations may have been duplicated to create a representative sample at the aggregate level, which would explain some non-uniqueness in the data. All this goes to show that it's important to know your data!
+
+### Scope
+
+Scope can mean a lot of things, from general missingness to larger questions about the data collection process (is data collection complete?). For now, let's cover missingness, which we have touched upon in previous modules.
+
+```{r scope}
+#sapply applys the function sum(is.na()) across columns of data
+sapply(data, function(x) sum(is.na(x)))
+```
+
+There's a significant number of missing values in the dataset across several variables! Many of these are a function of being age-specific questions (`tv_hrs_day_child`, for example). There may be others that are truly missing as a result of incomplete data collection. This is another area that it is important to know your data and how it is created!
+
+### Temporality
+
+This is more important when your dataset has granular date variables, but can also apply to knowing when these data were collected! For this NHANES dataset, we find the `survey_yr` variables have the values below:
+
+```{r temporality}
+unique(data$survey_yr)
+```
+
+This is great -- it's a quick confirmation of the metadata that If you did have date data, however, you could utilize libraries like `stringr` and `lubridate` to perform calculations and cleaning operations on said date data to operationalize it. Visit the **Strings and Dates** module to review said methods!
+
+### Faithfulness
+
+This last section is more about the representativeness of our data to the population we want to draw inference towards, or the population we are trying to summarize and understand. This is more an epidemiological and biostatistical front, so we won't dive into in this class. That being said, EDA will help you summarize key metrics such that you can review it for representativeness. Let's use the skills we used in Module 3: Summary Statistics, to create some tables!
+
+\newpage
+
+### Tabular Summaries (Table 1-esque summaries)
+
+Let's summarize and aggregate some key characteristics by a stratifying variable, in this case `race1`. In Module 3, we looked at `group_by` and `summarise`, but here we'll use a modification of `summarise` that lets you apply an aggregation function across multiple variables depending on other factors. We'll go through a few examples:
+
+```{r tabular summaries}
+#group by race1
+data %>% 
+  group_by(race1) %>%
+  #summarise if column is numeric, taking the mean for each numeric column
+  summarise_if(is.numeric, mean, na.rm = TRUE)
+
+#group by race
+data %>%
+  group_by(race1) %>%
+  #summarise "at" these specific columns (supplied in a list), taking the IQR for each
+  summarise_at(c("age", "bmi", "weight", "height", "pulse", "bp_sys_ave", "bp_dia_ave", "tot_chol"), ~ IQR(.x, na.rm = TRUE))
+
+
+#group by race1
+data %>%
+  group_by(race1) %>%
+  #summarise "at" these specific columns (supplied in a list), taking the IQR for each
+  summarise_at(c("age", "bmi", "weight", "height", "pulse", "bp_sys_ave", "bp_dia_ave", "tot_chol"), list(mean = mean, median = median, sd = sd), na.rm = TRUE)
+```
+That's great! Now that we have some tabular summaries of our continuous data, let's dive in and make some univariate plots. 
+
+\newpage
+ 
+### Univariate plots
+
+**Question #1**
+
+Referring to what we have covered in lecture, create **two** plots, one to show the distribution and shape of `bmi`, overall and then the second the distribution of `bmi` across categories of `race1`. Remember, you have many ways to displaying distribution of one variable, including:
+
+- Histogram
+- Smoothed density plot
+- Rug plot
+- Boxplot
+- Violin Plot
+- Sina Plot
+- Dotplot
+and others!
+
+```{r univariate plot 1}
+#Put your code for the first plot here, the distribution of BMI overall
+
+```
+
+```{r univariate plot 2}
+#Put your code for the second plot here, the distribution of BMI overall stratified by Race1
+
+```
+
+\newpage
+
+**Question #2**: Speaking of univariate plots: when would you choose not to use a rugplot, especially as it regards sample size? (refer to Week 5 lecture if needed)
+
+_Write your answer here._
+
+
+**Question #3**: Regardless of what plot you created for the second plot, what plot combines characteristics of the boxplot and the histogram, in displaying both the general distribution shape and features of its center and spread (outliers)?
+
+_Write your answer here._
+
+\newpage
+
+### Bivariate and multivariate plots
+
+Great! Let's take a closer look at BMI with another variable, `length`, which is the height of a participant taken when they are laying down (recumbent). 
+
+**Question #4**
+
+Try to create an appropriate plot where `length` is the x-axis and `bmi` is the y-axis.
+
+Add a trend line/line of best fit, and feel free to add any customization that you deem appropriate to increase visual clarity. Remember, we are just trying to look at the relationship between `length` and `bmi`.
+
+```{r bivariate plot 1}
+#your code here!
+
+```
+
+You might notice that the plot looks extended in weird ways, which probably lets us know that the data has some extreme outliers that are increasing the scope of the plot. Play around with the example code below, modifying to be different summary statistics to see where the outliers might be. 
+
+```{r}
+min(data$Length, na.rm = T)
+max(data$BMI, na.rm = T)
+```
+
+\newpage
+
+**Question #5**
+
+Let's make the plot again, but with adjustments.
+For visual clarity, let's only display data that are filtered for these conditions:
+
+- `bmi` less than 40
+- `length` greater than 80
+
+```{r bivariate plot 2}
+# Put your code here!
+
+```
+
+\newpage
+
+**Question #6**
+
+What if we wanted to give this plot more depth and add a third variable? Customize the plot such that it includes Race1 as a visual channel/component in the plot (e.g. distinguishing race by another feature of the plot, maybe stratifying plots by race - we recommend looking up the function `facet_wrap`).
+
+```{r multivariate plot 1}
+# Put your code here!
+
+```
+
+And that brings us to the end of Assignment 2 -- congrats! With this assignment we went through a framework for exploratory data analysis and made some plots to increase our understanding of our data. Please knit into a *Word* and submit it to Gradescope whenever you are done.
