@@ -1,6 +1,8 @@
 ---
 title: 'Module 2: Data Transformations'
 subtitle: 'PHW251B: Data Visualization for Public Health'
+params:
+  week: "week_2"
 output:
   html_document:
     df_print: paged

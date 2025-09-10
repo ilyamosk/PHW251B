@@ -1,9 +1,7 @@
 ---
 title: "Exercise 2: Scatterplots"
-subtitle: "PHW251B: Data Visualization for Public Health"
-author: 
-  - "Andrew Nguyen"
-  - "Ilya Moskalenko"
+author: "YOUR NAME HERE"
+date: "`r format(Sys.time(), '%m-%d-%Y', tz = 'America/Los_Angeles')`"
 params:
   week: "week_6"
 output:

@@ -101,20 +101,12 @@ Like always, we start with importing the dataset and performing some data cleani
 
 Throughout this module, you will want to **Knit to HTML**, which stands for *HyperText Markup Language* -- this is the programming language that undergirds much of the world wide web! It's a flexible structure that lets different static and dynamic objects interact on one webpage. A fantastic thing about R is that we can create these HTML webpages from a RMarkdown and either present information in an interactive format (as opposed to a static PDF) or even publish directly to the web!
 
-
 ```{r import data}
 # Week parameter
 week = params$week
 
 # Load rdata file with raw data
-load(file = here(week, "data", "us_aqi_historical.rdata"))
-
-# Modify dataset with steps below and assigning to a dataset named ca_aqi
-ca_aqi <- us_aqi_historical %>%
-  # Rename columns to lowercase and replacing spaces with underscores
-  clean_names() %>% # Replaced rename_with(~ tolower(gsub(" ","_", .x, fixed=TRUE)))
-  # Filter for CA in the state_id column
-  filter(state_id == "CA")
+load(file = here(week, "data", "ca_aqi.rds"))
 
 # Take a peek!
 head(ca_aqi)
