@@ -1,0 +1,410 @@
+---
+title: "Lab Module: Choropleth Maps"
+subtitle: "PHW251B: Data Visualization for Public Health"
+params:
+  week: "week_15"
+output: pdf_document
+---
+
+```{r setup, echo = F, warning=F, message=F}
+devtools::install_github("yutannihilation/ggsflabel")
+
+library(formatR)
+library(tidyverse)
+library(sf)
+library(ggsflabel)
+library(here)
+library(janitor)
+library(tigris)
+library(maps)
+
+knitr::opts_chunk$set(echo = TRUE, tidy = TRUE, tidy.opts = list(width.cutoff = 85))
+```
+
+## Introduction
+
+Welcome back to PHW251B! This lab module will go over the basics of handling and visualizing geospatial data, and in particular, choropleth maps! Despite it being an unwieldy word, **choropleth** in the context of visual maps simply refers to _using different shades of color to represent information about various areas in a map_. For example, here we have a map of New Zealand's regions symbolized by total population. Note with the code below that this is done entirely with functions in the `tidyverse`, with heavy leanings on `ggplot2` and a new package called `sf` that we'll introduce today. 
+
+## Objectives
+
+This module aims to give a succinct overview for geospatial data and its visualization:
+
+- Introduce geographic information systems (GIS) and its role in public health
+- Explore geospatial data, its formats, and how these data interface with R
+- Touch on how to use `sf` for geospatial data processing
+- Combine `sf` with `ggplot2` and other `tidyverse` packages for data cleaning and visualization
+- Procure geographic census datasets from the `tigris` library
+- Visualize and symbolize a choropleth map
+
+
+```{r fig.width=4, fig.height=4, warning=F, message=F}
+# You do not need to know this code right now, but poke around to see familiarities with earlier usages of ggplot2!
+
+# Week parameter
+week = params$week
+
+# Load dataset, noting that the file type is "sf". See any variable types that look new/unfamiliar?
+load(file = here(week, "data", "nz.rdata")) 
+
+# Lowercase and format column names
+data = data %>%
+  # Rename columns to lowercase, replace underscores with spaces
+  clean_names() # Using `clean_names` instead of `rename_with(~ tolower(gsub(" ","_", .x, fixed=TRUE)))`
+
+# Look at structure of data
+str(data)
+
+# Take a peek
+head(data)
+
+# Create ggplot object from data sf object
+ggplot(data = data) +
+  # Create polygons that are colored by a scale based on population size
+  geom_sf(aes(fill = population)) +
+  # Create polygons that have outlines colored by name of region, fill is transparent, and restrict dataframe to regions that have population > 500k
+  geom_sf(data = data %>% filter(population > 500000), color = "#e6550d", alpha = 0) +
+  # Create labels for regions that have population > 500k, color and label by name, shift position so that the labels don't cover the polygons
+  geom_sf_label_repel(data = data %>% filter(population > 500000), 
+                aes(label = name),
+                color = "#e6550d",
+                show.legend = F,
+                nudge_x = -300000,
+                nudge_y = -10,
+                seed = 100,
+                size = 3) +
+  # Apply classic theme
+  theme_classic() +
+  # Apply labels
+  labs(x = "Longitude",
+       y= "Latitude",
+       fill = "Population",
+       title = "New Zealand regions by population") +
+  # Turn off legend for colors, modify height of fill legend
+  guides(
+         fill = guide_colorbar(barheight = unit(5, "cm"))) +
+  scale_fill_stepsn(
+    # Specify four colors, from low to high values
+    colors = c("#e5f5f9", "#99d8c9", "#2ca25f", "#006d2c"),
+    space = "Lab",
+    na.value = "grey80",
+    guide = "coloursteps",
+    aesthetics = "fill")
+
+```
+
+## The Data
+
+Today we'll be utilizing CalEnviroScreen 4.0 (CES 4.0), an aggregate database of environmental exposures and measures of health equity for the entirety of California, by the census tract. This resource is built and maintained by OEHHA (The Office of Environmental Health Hazards), which is a branch within California's Environmental Protection Agency (CalEPA). 
+
+You can read more about CalEnviroScreen here: <https://oehha.ca.gov/calenviroscreen/report/calenviroscreen-40>
+
+CES 4.0 takes different population-level indicators such as air pollution exposure, poverty, education, and other factors to create aggregate scores of health and equity. Thus, it is an excellent dataset to investigate potential environmental and sociodemographic exposures for California. 
+
+## What is geographic information systems (GIS), and why is it important?
+
+GIS broadly refers to methods we use to visually and analytically understand data that have a spatial component - think locations of hospitals, digital representations of roads and pathways, the boundaries of a National Park. These are examples of the different geographic data forms: **points**, **lines**, and **polygons.** 
+
+![Depiction of different GIS data](data/points_lines_polygons.png)
+
+**Depiction of different GIS data**
+
+```{r}
+knitr::include_graphics(here(week, "images", "points_lines_polygons.png"))
+```
+
+GIS is especially important to public health because phenomena of health inequity and disparity are not randomly dispersed; we can often see patterns of differing exposures and health outcomes by geography. Think about racially-motivated housing inequities as a result of redlining, or assessing risk of wildfire among households at the edge of the wildlife urban interface (WUI). Just as health is not distributed randomly across sociodemographic factors, so too is it non-random at the geographic level (which oftentimes also sees non-random distribution of sociodemographics). This is what the concept of **autocorrelation** describes: things that are closer together are often correlated to one another.
+
+Using GIS, we can use geographic data as another covariate to describe our data and relate it to a health outcome. Think: distance to a refinery, number of grocery stores within a 30-minute commute, the temperature or air quality of a particular neighborhood. Although this module won't dive into most of these, it is helpful to know that these analytical methods exist for your future research and work. GIS represents a variegated and vast toolbox that can enhance our understanding of public health problems and the frameworks we utilize to address said problems.
+
+Here are some great classes, readings, and resources to learn more about GIS, public health, and how to implement it in R:
+
+- PBHLTH W272A: Introduction to Geographic Information Systems for Public Health (a good starter course for those without a GIS background)
+- PBHLTH W272C: Applied Spatial Data Science for Public Health (an advanced course that builds upon R and geospatial data science for involved space-time analyses)
+- PBHLTH W277: Applied GIS for Public Health Practice (a practical course for processing GIS data and creating visualizations)
+- Geocomputation with R <https://geocompr.robinlovelace.net/index.html>
+- Columbia University Library: GIS and R tools <https://guides.library.columbia.edu/geotools/R>
+
+
+### GIS data formats
+
+There are a handful of popular data formats in which you may see geospatial data:
+
+- **shapefile (.shp)**: this is a proprietary format from Esri, a well-known company that was the backbone of GIS development throughout the late 1900s with their ArcGIS platform, which is still widely considered the gold-standard for GIS software. 
+- **geojson (.json)**: this is an open standard format based on the JSON format, which is popular amongst data-driven industries.
+- **comma-separated values (.csv)**: the trusty .csv can be geocoded into spatial data! Often .csv's will have variables that describe the "geometry", or shape of the geographic data (i.e. latitude and longitude) that are interpreted by the GIS software one uses.
+- **simple features (sf)**: not as common are the three above, this file format is unique to R and the `sf` package. In short, it allows for the storage of geographic data like a traditional dataframe or tibble, and can be analyzed / processed as such. We can save sf files as .shp, .geojson, .rdata, and other formats.
+
+Read more about `sf` here:
+
+- Simple Features for R <https://r-spatial.github.io/sf/>
+- sf cheatsheet <https://github.com/rstudio/cheatsheets/blob/main/sf.pdf>
+
+### Some last-minute terminology
+
+-**symbolize**: change the visual representation of geospatial objects. In other words, when we add/change colors, shapes, and representations of geospatial data, we symbolize them. You can think of “symbolizing” as the GIS terms for “encoding” data.
+- **centroid**: the geometric middle, or average of a shape. Think of the centroid of a square polygon as its center.
+- ***coordinate reference system (crs)***: a semi-spherical template of how to represent the Earth's surface. A bit complex to delve into deeply right now, but you just need to know that you want different data to be in the same CRS if you're working with them in the same analysis. The `sf` package (or any modern GIS software) will allow you to do this, to convert the CRS of an object to another CRS if needed. This is called "projecting" (or re-projecting) to another CRS.
+
+If you’re interested to know more, you can read about CRS here: 
+
+Overview of coordinate reference systems in R <https://www.nceas.ucsb.edu/sites/default/files/2020-04/OverviewCoordinateReferenceSystems.pdf>
+
+## Importing and working with geospatial data 
+
+For now, let's focus on how we can take premade geospatial files (colloquially referred to as "shapefiles") and symbolize them with `sf` and `ggplot2`. We'll first go over importing shapefiles of different formats, which are made a breeze with `sf`. 
+
+```{r import data, warning=F, message=F}
+# Import data
+ces4 <- read_csv(here(week, "data", "ces4.0_data.csv")) %>%
+  # Rename columns to lowercase, replace underscores with spaces
+  clean_names() # Using `clean_names` instead of `rename_with(~ tolower(gsub(" ","_", .x, fixed=TRUE)))`
+
+# Peek at data
+head(ces4)
+```
+
+You may notice that this CES 4.0 csv is like any other dataset that we have encountered before in this course - rows and columns, the first being observations and the latter representing variables. Since this dataset doesn't have an inherent geospatially-enabled variable (like latitude and longitude), we rely on another geographically-identifying variable. In this case, it will be `census_tract`. We will use this variable to **join** to a shapefile of census tracts provided by the US Census Bureau. Thus, each observation with a census tract will be geographically linked and represented by the tracts outlined by the Census Bureau. 
+
+Here is a breakdown of the steps that we need to take to geographically "enable" these data:
+
+1. Ensure that the CES 4.0 dataset doesn't have multiple observations for a single census tract. This violates the **tidy data** principle we discussed earlier in the course and makes it difficult to join it to geographic data.
+2. Procure a census tract shapefile from the US Census Bureau. 
+3. Join the CES 4.0 dataset to the census tract shapefile on a primary key or identifying variable that appears in both datasets. **A primary key uniquely identifies an observation in its own table.** This may require some data cleaning to produce comparable primary keys. 
+
+Let's start with the first step, checking for the uniqueness of each observation in CES 4.0. From the website, it appears that the dataset is at the census tract level, and therefore the census tract variable should be the primary key. 
+
+```{r primary key check, warning=F, message=F}
+# Calculate number of unique census tracts in dataset, noting that it matches the number of rows in the dataset
+length(unique(ces4$census_tract))
+```
+
+We find that the `census_tract` is indeed a unique variable and can serve as the primary key. Next, we'll procure a shapefile from the US Census Bureau. To achieve this, we'll utilize the `tigris` library, which is built to facilitate easy access to TIGER/Line shapefiles that are used to inform Census geographic boundaries. You can read more about TIGER/Line shapefiles here: <https://www.census.gov/geographies/mapping-files/time-series/geo/tiger-line-file.html>
+
+
+```{r tigris, warning=F, message=F}
+# Documentation
+?tigris
+
+# Pull California census tracts
+ca_census <- tigris::tracts(state = "CA") %>%
+  clean_names() # Using `clean_names` instead of `rename_with(~ tolower(gsub(" ","_", .x, fixed=TRUE)))`
+
+# Peek at the data, noting that it is a simple feature/sf multipolygon file!
+head(ca_census)
+```
+
+Upon previewing the TIGER/Line data and comparing it to the CES 4.0 data, we find one problem: the primary keys are in different formats and representations. Specifically:
+
+- For CES 4.0, the census tract variable `census_tract` is a numeric **dbl** variable and has 10 digits.
+- The TIGER/Line instead has the `geoid` variable that is a character variable and has 11 characters, the main difference being the starting "0" in each entry.
+
+Thus, we need to reconcile both variables to create a successful join operation. Recall from previous modules that we can leverage the package `stringr` to manipulate patterns within character data or modify existing strings. For this problem, we will create a comparable `geoid` variable in the CES 4.0 data. In other words, we will convert the existing `census_tract` variable to a character variable and append it to a starting "0". All of this will be made on a copy of the original `ces4` dataset, now called `ces4_clean`.
+
+**Optional data cleaning exercise**: Try to reconcile these variables but by modifying the ca_census dataset and `geoid` variable instead.
+
+```{r reconcile fields, message=F, warning=F}
+#create a new dataset named ces4_clean with a new variable called geoid
+ces4_clean <- ces4 %>%
+  #new variable geoid will be combination of "0" and census_tract variable, as characters
+  mutate(geoid = str_c("0", as.character(census_tract)))
+```
+
+Great! Now that both datasets have comparable variables identifying the census tracts, we can join them. Note that in our arguments, our first dataset (or "x") should be the dataset that is a simple feature (sf) object, to maintain the geospatial format. We perform a **left_join** so that we retain rows that appear in the TIGER/Line shapefile, no matter if it has data from CES 4.0 or not.
+
+```{r join datasets, message=F, warning=F}
+#create a new dataset joining ces4_clean to ca_census on geoid field
+data <- left_join(x = ca_census,
+                   y = ces4_clean,
+                   by = "geoid")
+
+#take a peek at our analytical dataset, noting that it is now an sf object
+head(data)
+```
+
+## Visualizing geospatial data
+
+Now we have an sf object with data that we can visualize! Let's dive right in, with base R tools:
+
+Note that we can use `dplyr` tools to filter specific census tracts that belong to Alameda and Contra Costa counties.
+
+```{r plot data, message=F, warning=F}
+# Plot California census tracts in Alameda and Contra Costa counties symbolized by % residents who are categorized as having income below the Federal Poverty Level
+plot(data %>% 
+       filter(california_county == "Alameda" | california_county == "Contra Costa") %>%
+       select(geometry, poverty))
+
+
+# We selected only the geometry field (the field that informs the sf object's shape) and poverty, since we didn't want R to plot every single variable -- that would take a considerable amount of time and computing power
+```
+This is not a bad visual to start off with! Note that there are parts of California that aren't symbolized (appearing blank or white). This just means that the dataset didn't include these census tracts. In the next code chunk, we'll focus on using `ggplot2` to further customize our map!
+
+Let's start off with the tried and true `ggplot` format, this time with the function `geom_sf`:
+
+`ggplot(data = <DATA>, mapping = aes(<MAPPINGS>)) + <GEOM_FUNCTION>()`
+
+```{r ggplot data, message=F, warning=F}
+ggplot(data %>%
+         filter(california_county == "Alameda" | california_county == "Contra Costa")) +
+  geom_sf(mapping = aes(fill = poverty))
+```
+
+You'll see that at first, there is not much difference from the base R `plot` function. We do get an underlay of coordinates, and the title is now the legend. In many ways, the former plot is superior in visual clarity; the color scale palette is more distinct and the lines separating each census tract are sharper and a darker black color. The latter plot also fills in census tracts that have missing data with a grey color that is hard to distinguish. But at the core, both plots are choropleth maps! They take a geographic shapefile and symbolize some information about it (in this example, continuous data) through different color shades.
+
+Let's dig into different customizations that can improve our map! 
+
+The ggplot2 reference page will be very helpful for different functions: <https://ggplot2.tidyverse.org/reference/index.html>
+
+This Rcolor pdf is a useful reference for colors in R: 
+<http://www.stat.columbia.edu/~tzheng/files/Rcolor.pdf>
+
+You can also use HEX codes in place of a color name (so "#ffffff" instead of "white"). Here are some useful resources for picking palettes:
+- <https://colorbrewer2.org/> (tried and true color palettes with great accessibility options)
+- <https://coolors.co/> (a flexible randomized and/or assisted color generator with built in contrast checkers)
+
+Let's start off with different color scales, with different `scale_fill` functions and some parameters within `geom_sf`:
+
+- colour/color: affects the color of the lines outlining the polygons
+- size: affects the size of the lines outlining the polygons
+
+For `scale_fill_gradient`, where you can specify a manual gradient:
+- low: the color that will inform lower ranges of the variable values
+- high: the color that will be at higher ranges of the variable values
+- space: by default, is "Lab"
+- na.value: color given for observations missing data
+- aesthetics: indicates which aesthetic this function will interact with (fill and/or color (outline))
+
+Note that we also utilize `scale_fill_gradientn`, where you can specify more than two colors (i.e. more than `low` and `high`). Further, we keep the same dataset, but we give it a proper name `data_eastbay` to streamline our code.
+
+```{r r ggplot data 2, message=F, warning=F}
+# Create subset of data that is only Alameda and Contra Costa counties
+data_eastbay <- data %>%
+  filter(california_county == "Alameda" | california_county == "Contra Costa")
+
+?scale_fill_gradient
+
+#scale_fill_gradient
+ggplot(data_eastbay) +
+  # We specify line color black and line width 0.25
+  geom_sf(mapping = aes(fill = poverty), colour = "black", size = 0.25) +
+  scale_fill_gradient(
+    low = "darkorchid4",
+    high = "darkseagreen1",
+    space = "Lab",
+    na.value = "grey80",
+    guide = "colourbar",
+    aesthetics = "fill") +
+  labs(fill = "% Poverty")
+
+?scale_fill_gradientn
+
+#scale_fill_gradientn, where we can specify more than two colors
+ggplot(data_eastbay) +
+  geom_sf(mapping = aes(fill = poverty), colour = "black", size = 0.25) +
+  scale_fill_gradientn(
+    # Specify four colors, from low to high values
+    colors = c("darkorchid4", "darkseagreen1", "darkorange1", "firebrick1"),
+    space = "Lab",
+    na.value = "grey80",
+    guide = "colourbar",
+    aesthetics = "fill") +
+  labs(fill = "% Poverty")
+```
+
+You can see a considerable difference in visual clarity when we can specify more steps in the color scale. In the same vein of thought, what if we create color bins for specific ranges of the continuous variable of interest? We can do this in two ways:
+
+1. utilize another `ggplot` function like `scale_fill_steps`
+2. create a factored (categorical) indicator variable like we did in the module **02_data-transformations**
+
+Since this module is focused on utilizing `ggplot2` with `sf`, we'll stick to the first method. As an **optional challenge**, you can try to create an indicator variable for whichever categorization of poverty levels you would like and symbolize it using a `scale_fill` function.
+
+```{r r ggplot data 3, message=F, warning=F}
+?scale_fill_stepsn
+
+# scale_fill_stepsn, where we can specify more than two colors
+ggplot(data_eastbay) +
+  geom_sf(mapping = aes(fill = poverty), colour = "black", size = 0.25) +
+  scale_fill_stepsn(
+    # Specify four colors, from low to high values
+    colors = c("darkorchid4", "darkseagreen1", "darkorange1", "firebrick1"),
+    space = "Lab",
+    na.value = "grey80",
+    guide = "coloursteps",
+    aesthetics = "fill",
+    # Manually indicate at which values where breaks should go
+    breaks = c(20, 40, 60, 80),
+    # Manually indicate what values the scale should cover
+    limits = c(0, 100)) +
+  labs(fill = "% Poverty")
+```
+Binning colors like above can simplify a color scale and increase visual acuity for many viewers. Especially when working with graphics using multiple colors, or color scales, it is important to keep accessibility in mind. Also consider if your graphic could be reproduced in grayscale. Feel free to modify the code above and see how your symbolization choices affect the map.
+
+## Adding more than one geospatial object
+
+In this next section, we'll utilize the library `maps` and its function `world.cities`, which lets us access a database of cities that have a population greater than 40,000. Each observation comes with its own latitude and longitude, which we can use to create an `sf` object. Then, we can add it to our existing map of the East Bay area using a new `geom_function`.
+
+We run into a problem, where it's hard to subset the cities that we want, i.e. only in the East Bay area. We will use an `sf` geoprocessing tool `st_contains`, which lets us know if observations in one dataset (points, lines, or polgyons) are geographically within the boundaries of another dataset (usually polygons). This is out of scope for this specific module, but this geoprocessing framework, among others, is a cornerstone of GIS analysis. 
+
+This means that we will use `st_contains` to see which cities, represented by points, in the `world.cities` dataset are geographically contained within East Bay counties, represented by polygons. For the counties, we’ll be using the `tigris` library as we did before.
+
+```{r explore cities, message=F, warning=F}
+library(maps)
+
+# Create a new dataset called cities from the maps database
+cities <- maps::world.cities
+
+# Convert the cities dataset into an sf object, setting crs = 4269 (same as census tract data)
+cities_geo <- st_as_sf(cities, coords = c("long", "lat"), crs = 4269)
+
+# Use the tigris library again to pull county shapefiles 
+counties <- tigris::counties(state = "California") %>%
+  filter(NAME == "Alameda" | NAME == "Contra Costa") %>%
+  # Rename columns to lowercase, replace underscores with spaces
+  clean_names() # Using `clean_names` instead of `rename_with(~ tolower(gsub(" ","_", .x, fixed=TRUE)))`
+  
+# Check that the coordinate reference systems are the same
+st_crs(cities_geo)
+st_crs(counties)
+
+# Find cities that are within our East Bay area dataset
+cities_eastbay <- st_join(x = cities_geo,
+            y = counties,
+            join = st_within) %>%
+  filter(is.na(countyfp) == F) %>%
+  rename("city_name" = "name.x") %>%
+  # Rename columns to lowercase, replace underscores with spaces
+  clean_names() # Using `clean_names` instead of `rename_with(~ tolower(gsub(" ","_", .x, fixed=TRUE)))`
+
+# Plot our census tracts and cities!
+ggplot() +
+  geom_sf(data_eastbay,
+          mapping = aes(fill = poverty), colour = "black", size = 0.25) +
+  scale_fill_stepsn(
+    # Specify four colors, from low to high values
+    colors = c("darkorchid4", "darkseagreen1", "darkorange1", "firebrick1"),
+    space = "Lab",
+    na.value = "grey80",
+    guide = "coloursteps",
+    aesthetics = "fill",
+    # Manually indicate at which values where breaks should go
+    breaks = c(20, 40, 60, 80),
+    # Manually indicate what values the scale should cover
+    limits = c(0, 100)) +
+  # Add another geom sf function with our cities, filtering for those with more than 90k population
+  geom_sf(data = cities_eastbay %>% filter(pop > 90000), 
+          colour = "deeppink",
+          size = 3) +
+  # Create a label for our cities (with the same filter)
+  geom_sf_label_repel(data = cities_eastbay %>% filter(pop > 90000), 
+                aes(label = city_name), 
+                show.legend = F,
+                seed = 1,
+                size = 3.5) +
+  labs(fill = "% Poverty",
+       color = "City",
+       title = "Reported poverty levels in Alameda and Contra Costa Counties",
+       y = "Latitude",
+       x = "Longitude") +
+  theme_classic()
+```
+
+Now you’ve learned the basics of applying GIS principle within R. GIS is a complex field, but we hope with this introduction to geospatial objects in R in conjunction with how they integrate with ggplot2, you can begin to understand how to approach data visualization of geospatial data. In many ways, it is an extension of what we already know about marks and channels in data visualization, but marks are more readily known as “layers”. In future lectures and lab modules, we will delve deeper into applying GIS methods in R and how to use publicly available applications and datasets to visualize geographic data.

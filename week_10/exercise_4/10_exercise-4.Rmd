@@ -1,0 +1,109 @@
+---
+title: 'Lab Module: Interactive Plots & Tables'
+subtitle: 'PHW251B: Data Visualization for Public Health'
+author: "YOUR NAME HERE"
+date: "`r format(Sys.time(), '%m-%d-%Y', tz = 'America/Los_Angeles')`"
+params:
+  week: "week_10"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(plotly)
+library(scales)
+library(sf)
+library(lemon)
+library(ggthemes)
+library(DT)
+library(reactable)
+library(sparkline)
+library(ggiraph)
+library(patchwork)
+library(here)
+library(janitor)
+```
+
+\newpage
+
+# Instructions
+
+## Submission 
+
+Please knit your file as a **HTML Document** (to display interactivity) and submit your assignment to **Gradescope**.
+
+## Tips 
+
+  - The questions in **this exercise** are meant to complement `Lab Module: Interactive Plots & Tables` in `Week 10`.
+  
+  - **This exercise** is going to use the `ca_aqi.rds` dataset that we cleaned in `Module: Scatterplots`
+
+  - Please make sure to double check that your code does not run off the page in your knitted **HTML Document**. To fix this issue, go back to your code, and add new lines in your code by hitting enter so that part of the code chunk is on another line. 
+
+\newpage
+
+# Read in the Data
+
+```{r import data}
+# Week parameter
+week = params$week
+
+# Read clean rds (R dataset) file with `write_rds`
+ca_aqi = read_rds(here(week, "data", "top5_cities.rds"))
+```
+
+\newpage
+
+# Run this code
+
+These steps are going to create dataframe `top5_df` for the 5 cities with highest average AQI in California using `ca_aqi`.
+
+```{r}
+# Here we generate the names of cities we are interested in
+top5cities <- ca_aqi %>%
+  # Group by city
+  group_by(city_ascii) %>%
+  # Population-weighted average of AQI
+  summarise(mean_aqi = weighted.mean(aqi, population, na.rm = T)) %>%
+  # Sort dataframe by mean aqi, in descending order
+  dplyr::arrange(desc(mean_aqi)) %>%
+  # Take the top 5
+  head(5) %>%
+  # Select just the city names
+  select(city_ascii) %>%
+  # Convert the dataframe into a vector
+  as_vector()
+
+# Create dataframe with all unaggregated AQI measurements
+top5_df <- ca_aqi %>%
+  # Filter for cities within our list
+  filter(city_ascii %in% top5cities,
+         # Filter out extreme aqi values
+         aqi < 1000)
+```
+
+\newpage
+
+# Question 1
+
+Use the `top5_df` dataframe we've prepared above (the 5 cities with highest average AQI in California) from `Lab Module: Interactive Plots & Tables` and create either an interactive **violin plot** or an interactive **box plot** to depict the spread of AQI measurements across the five cities using`ggplot` with a `ggplotly` conversion.
+
+Of importance is to take note as to how the tooltip is being generated. Refer to the code from `Lab Module: Interactive Plots & Tables` to customize the tooltip if you deem it necessary.
+
+```{r}
+
+```
+
+\newpage
+
+# Question 2
+
+Build the same plot as you did in *Question 1* using native `plotly` object construction.
+
+```{r}
+
+```

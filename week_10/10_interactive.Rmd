@@ -1,0 +1,1049 @@
+---
+title: 'Lab Module: Interactive Plots & Tables'
+subtitle: 'PHW251B: Data Visualization for Public Health'
+author: 
+  - "Andrew Nguyen"
+  - "Ilya Moskalenko"
+params:
+  week: "week_10"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(plotly)
+library(scales)
+library(sf)
+library(lemon)
+library(ggthemes)
+library(DT)
+library(reactable)
+library(sparkline)
+library(ggiraph)
+library(patchwork)
+library(here)
+library(janitor)
+```
+
+## Introduction
+
+Welcome back to PHW251B! This lab module will be covering various interactive plots and tables that can be created in R with different packages. We will be extending various types of plots that we have been working with thus far in ways that allow for increased engagement and flexibility for our audiences. Interactive plots are incredibly powerful in R, since the reproducibility can allow for on-the-fly dashboards and interactive reports that need minimal upkeep after the initial coding. Creating interactive plots also encompasses the ideals of accessibility needed for static visualizations, and requires additional care when considering the user interactivity and experience. We will try to keep this in mind while exploring options in packages such as `plotly`, `datatables` and others. 
+
+## Objectives
+
+- Explore `plotly` and how to create interactive plots from existing `ggplot2` objects
+- Create native `plotly` objects
+- Explore other interactive graphing libraries like `ggiraph` 
+- Create interactive tables with `DT` and `reactable`
+
+## The Data
+
+Today we'll be using a variety of datasets. 
+
+**US EPA Air Quality Index, Historical Data**
+
+AQI, or Air Quality Index, is the primary way to measure the current quality of the air. 
+
+AQI values are given these ranges:
+
++---------------+-------------------------------------+--------------------+
+| AQI Ranges    | Category                            | Colors             |
++===============+=====================================+====================+
+| 0-50          |  Good                               |   Green            |
++---------------+-------------------------------------+--------------------+
+| 51-100        |  Moderate                           |   Yellow           |
++---------------+-------------------------------------+--------------------+
+| 101-150       |  Unhealthy for Sensitive Groups     |   Orange           |
++---------------+-------------------------------------+--------------------+
+| 151-200       |  Unhealthy                          |   Red              |
++---------------+-------------------------------------+--------------------+
+| 201-300       |  Very Unhealthy                     |   Purple           |
++---------------+-------------------------------------+--------------------+
+| 301-500       |  Hazardous                          |   Maroon           |
++---------------+-------------------------------------+--------------------+
+
+This dataset includes observations for individual air monitoring areas across the *entire* United States and their daily air pollution measurements dating from 1980 to present day. An area is made up of a series of air pollution monitors within it. Each observation also includes the latitude and longitude of the air monitoring area and residential population from where it was taken.
+
+Here are the individual variables and their descriptions:
+
+- CBSA Code: The core-based statistical area (CBSA) code. CBSA = a U.S. geographic area defined by the Office of Management and Budget (OMB) that consists of one or more counties.
+- Date: The day of measurement.
+- AQI: The average air quality index (AQI) value for the day.
+- Category: The category of air quality ranging from "Good" to "Hazardous".
+- Defining Parameter: One of PM2.5 (particulate matter), PM10, Ozone, Carbon Monoxide, Sulfur Dioxide, or Nitrogen Dioxide which has the highest concentration.
+- Number of Sites Reporting: The number of stations used to make the data aggregation.
+- city_ascii: Name of the city where the measurement was taken.
+- state_id: Abbreviation of the state where the measurement was taken.
+- state_name: The state where the measurement was taken.
+- lat: The latitude where the measurement was taken.
+- lng: The longitude where the measurement was taken.
+- population: The population of the region where the measurement was taken.
+- density: The population per square kilometer where the measurement was taken.
+- timezone: The time zone of the region where the measurement was taken.
+
+These data are provided by the US EPA through their EPA Data Mart. For more information, check here: <https://aqs.epa.gov/aqsweb/airdata/download_files.html>
+
+## Related Resources
+
+`Plotly` for R: <https://plotly.com/r/>
+Interactive web-based data visualization with R, `plotly`, and `shiny`: <https://plotly-r.com/index.html>
+`DT`, and `R` interface to the `DataTables` library: <https://rstudio.github.io/DT/>
+The `ggiraph` book: <https://www.ardata.fr/ggiraph-book/>
+`reactable` for R: <https://glin.github.io/reactable/>
+
+**Let's get started!**
+
+Like always, we start with importing the dataset and performing some data cleaning. Then, we'll perform some exploratory data analysis using static plots and their interactive counterparts. At every part we'll include annotation explaining the steps taken. 
+
+Throughout this module, you will want to **Knit to HTML**, which stands for *HyperText Markup Language* -- this is the programming language that undergirds much of the world wide web! It's a flexible structure that lets different static and dynamic objects interact on one webpage. A fantastic thing about R is that we can create these HTML webpages from a RMarkdown and either present information in an interactive format (as opposed to a static PDF) or even publish directly to the web!
+
+
+```{r import data}
+# Week parameter
+week = params$week
+
+# Load rdata file with raw data
+load(file = here(week, "data", "us_aqi_historical.rdata"))
+
+# Modify dataset with steps below and assigning to a dataset named ca_aqi
+ca_aqi <- us_aqi_historical %>%
+  # Rename columns to lowercase and replacing spaces with underscores
+  clean_names() %>% # Replaced rename_with(~ tolower(gsub(" ","_", .x, fixed=TRUE)))
+  # Filter for CA in the state_id column
+  filter(state_id == "CA")
+
+# Take a peek!
+head(ca_aqi)
+```
+
+### AQI Categories
+
+We have a variable named `category` that describes designations of specific air quality ranges that are determined to be generally safe, unsafe, or dangerous for the public by the EPA. Given that this a categorical variable, we can already think back to our material that covers plots for such data -- namely, **bar charts**! Let's explore the data and make some visualizations.
+
+```{r aqi categories}
+# How many specific AQI categories in our dataset?
+length(unique(ca_aqi$category))
+
+# What are the specific AQI categories in our dataset?
+unique(ca_aqi$category)
+
+# How many times do each of these occur in the dataset?
+table(ca_aqi$category)
+
+# What if we wanted to turn these into percentages of the dataset?
+table(ca_aqi$category) %>% prop.table() %>% round(4)*100
+
+# Factor variables so the order makes sense
+ca_aqi <- ca_aqi %>%
+  mutate(category = factor(category, 
+                           levels = c("Good", "Moderate", 
+                                     "Unhealthy for Sensitive Groups", 
+                                     "Unhealthy", "Very Unhealthy", "Hazardous"),
+                           ordered = TRUE))
+```
+
+After doing the above exploration of the `category` variable, we can make a grouped-by dataset to visualize the data using a bar chart, drawing from previous modules for summary statistics and bar charts.
+
+```{r aqi categories 2}
+# Let's see how much of the total dataset lies in each category!
+aqi_categories_percentage <- ca_aqi %>% 
+  # Group by category of AQI
+  group_by(category) %>%
+  # Number of observations in a unique group divided by the number of rows in the dataset
+  summarise(percentage = 100*n()/nrow(ca_aqi)) %>%
+  # Round numeric columns to one digit
+  mutate_if(is.numeric, round, 1)
+
+# Let's make a static ggplot object for this, store to object called bar_static!
+bar_static <- ggplot(data = aqi_categories_percentage, aes(y = category, 
+                                                           x = percentage, 
+                                                           fill = category)) +
+  # geom col, encode by category, border of linewidth 1, fill of alpha/transparency 0.5
+  geom_col(aes(color = category), linewidth = 1, alpha = 0.5) + 
+  # Add data labels of percentage + %, text color is white, adjust horizontal position, bolded
+  geom_label(aes(label = paste(percentage, "%")), color = "white", hjust = -0.25, fontface = "bold") + 
+  # Reverse direction of y-axis categories, add text wrap to labels (multiline)
+  scale_y_discrete(limits = rev(levels(aqi_categories_percentage$category)),
+                   labels = label_wrap(10)) +
+  # Add manual fill and color scales to match color categories given for AQI 
+  scale_fill_manual(values = c("green3", "gold", "orange", "red", "purple", "maroon")) + 
+  scale_color_manual(values = c("green3", "gold", "orange", "red", "purple", "maroon")) + 
+  # Adjust x axis start point
+  scale_x_continuous(expand = c(0,1), limits = c(0, 65)) +
+  # Add white background
+  theme(panel.background = element_rect(fill = "white"),
+        # Take out grid
+        panel.grid = element_blank(),
+        # Take out ticks 
+        axis.ticks = element_blank(),
+        # Add custom x axis line
+        axis.line.x = element_line(color = "grey90", linewidth = 1.25),
+        # Bold axis titles, make a medium-darkness gray
+        axis.title = element_text(color = "grey60", face = "bold"),
+        # Bold axis text (categories), make medium grey
+        axis.text = element_text(color = "grey60", face = "bold")) + 
+  # Remove legends for fill and color
+  guides(fill = "none",
+         color = "none") +
+  # Remove y axis title, add x axis title
+  labs(y = "",
+       x = "Percentage (%)")
+
+# Display the ggplot object we just made
+bar_static
+```
+
+Now that we've made this aggregated dataset and `ggplot` object with different methods that we know and love, let's convert it to an interactive `plotly` object. The process is extremely straightforward -- we drop our `ggplot` object into `ggplotly()`, a function that converts it to a `plotly` object.
+
+```{r aqi categories 3}
+# Convert this into a plotly object using `ggplotly()` wrapped around the ggplot2 object -- it's that easy!
+
+# Make the same ggplot object as above, just adding the `text` object in aes() to use in the interactive hover text
+bar_static <- ggplot(data = aqi_categories_percentage, aes(y = category, 
+                                                           x = percentage, 
+                                                           fill = category,
+                                                           #the hover text will read "Percentage: ##%"
+                                                           text = paste("Percentage:", percentage))) +
+  #geom col, encode by category, border of size 1, fill of alpha/transparency 0.5
+  geom_col(aes(color = category), size = 1, alpha = 0.5) + 
+  # Add data labels of percentage + %, text color is white, adjust horizontal position, bolded
+  geom_label(aes(label = paste(percentage, "%")), color = "white", hjust = -0.25, fontface = "bold") + 
+  # Reverse direction of y-axis categories, add text wrap to labels (multiline)
+  scale_y_discrete(limits = rev(levels(aqi_categories_percentage$category)),
+                   labels = label_wrap(10)) +
+  # Add manual fill and color scales to match color categories given for AQI 
+  scale_fill_manual(values = c("green3", "gold", "orange", "red", "purple", "maroon")) + 
+  scale_color_manual(values = c("green3", "gold", "orange", "red", "purple", "maroon")) + 
+  # Adjust x axis start point
+  scale_x_continuous(expand = c(0,1), limits = c(0, 65)) +
+  # Add white background
+  theme(panel.background = element_rect(fill = "white"),
+        # Take out grid
+        panel.grid = element_blank(),
+        # Take out ticks 
+        axis.ticks = element_blank(),
+        # Add custom x axis line
+        axis.line.x = element_line(color = "grey90", size = 1.25),
+        # Bold axis titles, make a medium-darkness gray
+        axis.title = element_text(color = "grey60", face = "bold"),
+        # Bold axis text (categories), make medium grey
+        axis.text = element_text(color = "grey60", face = "bold")) + 
+  # Remove legends for fill and color
+  guides(fill = "none",
+         color = "none") +
+  # Remove y axis title, add x axis title
+  labs(y = "",
+       x = "Percentage (%)")
+
+
+# Referencing the text object in the ggplotly call
+ggplotly(bar_static, tooltip = "text") %>%
+  # Remove legend through a plotly function, ggplotly doesn't translate guides correctly
+  layout(showlegend = FALSE)
+```
+
+You'll notice there's a few issues, though -- there's a ton of error messages that suggest that `plotly` doesn't understand a lot of these additional modifications. For example, the `geom_label()` doesn't appear.
+
+If you remove the `toolip = "text"` argument from the `ggplotly` function, you'll see that when hovering over specific bars, we see that the `category` field is repeated. Interestingly, the hover text is comprised of any variables that we put in an `aes()` argument! That's why we see `category` three times. This is an easy and quick solution to make our plots interactive, but there are some quirks that we must be aware of. We may have more granular control by making native `plotly` objects.
+
+### plotly vs. ggplotly
+
+This may be a point of confusion, but there's actually two ways we're approaching interactive plots here, with some subtle distinctions!
+
+Before this module, we have been using `ggplot` to create static graphs, plots, and maps! It has its own syntax, or "grammar" to build plots (`ggplot() + geom()`, what you've been familiar with). `ggplot` is made just for static plots, or ones that are not interactive. They're great for printed PDFs and HTML reports that don't need interactivity.
+
+`plotly` is a library that is built on Javascript and has its own syntax, or grammar (which we'll cover more below) that is separate from `ggplot`. When we say "native plotly object", it means to create a plotly visualization with its grammar, or syntax. It's primary purpose is to build interactive plots, where observations on the graph/chart/plot can be selected and/or investigated further. Normally, these are presented in HTML reports/dashboards. You can still knit them to static PDFs, but they will be static and *sometimes may not show up at all*.
+
+**So what's ggplotly()?**
+
+`ggplotly` is a package that takes a static `ggplot` object and converts it into a `plotly` object! Meaning, you can create a plot using the normal `ggplot` grammar and syntax that you know, but transform it into an interactive plot. It's really neat, and sometimes offers more customization flexibility than building a native `plotly` object -- some examples to follow. Going forward, the "ggplotly method" refers to first creating a `ggplot` object and then passing it through `ggplotly` to make it interactive!
+
+
+## Plotly Structure
+
+The general `plotly` structure is fairly straightforward, and is similar to `ggplot2` in many ways:
+
+`plot_ly(data = dataframe, x = var1, y = var2, type = "bar", color = "", alpha = "", size = "", ... )`
+
+Take a look here for more native `plotly` code structure: <https://plotly.com/r/reference/index/>
+
+```{r aqi categories 4}
+# Pull up documentation for plotly
+?plot_ly
+
+# Note how plotly uses the %>% instead of + that ggplot uses to stack functions on top of each other!
+# Basic horizontal bar chart
+plot_ly() %>%
+  add_trace(data = aqi_categories_percentage, 
+            # Specify x axis
+            x = ~percentage,
+            # Specify y axis
+            y = ~category, 
+            # Specify type of chart
+            type = "bar") %>%
+  layout(title = "Basic Plotly Horizontal Bar Chart")
+
+# Plotly object with more modifications to be in line with the ggplot object we made earlier
+
+# Initialize plotly (like making an empty ggplot item)
+plot_ly() %>% 
+  # Add trace is akin to adding a geom_object
+  add_trace(data = aqi_categories_percentage, 
+            # Specify x axis
+            x = ~percentage,
+            # Specify y axis
+            y = ~category, 
+            # Specify type of chart
+            type = "bar",
+            # Indicate data labels and position of said labels
+            text = ~percentage, textposition = "outside",
+            # Create manual discrete color scale for filled bars, emulating viridis palette, alpha = 0.5 (half transparency)
+            marker = list(color = c("rgba(50, 205, 50, 0.5)",
+                                    "rgba(255, 200, 0, 0.5)",
+                                    "rgba(255, 165, 0, 0.5)",
+                                    "rgba(255, 0, 0, 0.5)",
+                                    "rgba(138, 43, 226, 0.5)",
+                                    "rgba(178, 34, 34, 0.5)"),
+                          # Manual discrete color scale for border, viridis palette, alpha = 1.0
+                          line = list(color = c("rgba(50, 205, 50, 1.0)",
+                                    "rgba(255, 200, 0, 1.0)",
+                                    "rgba(255, 165, 0, 1.0)",
+                                    "rgba(255, 0, 0, 1.0)",
+                                    "rgba(138, 43, 226, 1.0)",
+                                    "rgba(178, 34, 34, 1.0)"),
+                                    #width of border = 2
+                                    width = 2))) %>%
+  # Order the categories (it should be descending, but plotly reads the factors in reverse)
+  layout(yaxis = list(title = "", categoryorder = "total ascending"),
+         # Add xaxis title
+         xaxis = list(title = "Percentage (%)"),
+         title = "Plotly duplicate of ggplot chart")
+
+
+```
+
+Plotly isn't without its own limitations and quirks -- above is an example of my attempt to replicate the original ggplot object, but with some caveats (some of which are the limitations of my own documentation-searching and implementation skills):
+
+- No direct replacement for `geom_text`
+- Missing line breaks in the y-axis labels (if anyone can figure this out, I'd love to learn how!)
+- Translucent fill but opaque borders without explicit coding
+
+Which is the better implementation? That's really up to your discretion! In this bar charts example, there's a few decisions to make about legibility and customization, and my personal preference would be the `ggplotly` implementation. In my experience, `plotly` charts end up looking quite similar to each other since the range of visual changes is limited compared to `ggplot`. However, if the interactivity is your main priority, it may not matter. 
+
+Where `plotly` stumbles especially is the consistency and availability of documentation. Despite `plotly` being a major cross-language library (it's widely used in `Python`), the `R`-verse doesn't have great documentation and expansion (yet!), and it can leave people who want more granular control over aesthetics wanting. This is where `ggplotly` can fill the gap.
+
+## Continuous Data
+
+Next, we'll move onto some univariate and multivariate plots with `plotly` and their `ggplot` counterparts.
+
+Let's look at the distribution of AQI values within this dataset, first with some summarizing functions and then with plots. Note that AQI is measured in integers (whole numbers), so it might not lend to the smoothest univariate plots.
+
+Some takeaways: 
+
+- `aqi` has a right skew distribution (we can see this with the mean being higher than median) with several very large outliers
+- 0.04% of the dataset has an AQI above 500, or what is considered "extremely hazardous"
+
+
+### Density & Univariate Distribution
+
+```{r aqi distribution}
+# See a continuous summary of the variable -- we see that it is right skewed with a huge outlier
+summary(ca_aqi$aqi)
+
+# How many outliers do we see above 500 AQI (what is considered "extremely hazardous")? 
+nrow(ca_aqi %>% filter(aqi > 500))/nrow(ca_aqi)*100
+
+# Let's subset our data to values below 500
+aqi_histogram <- ggplot(data = ca_aqi %>% filter(aqi < 500), aes(x = aqi)) + 
+  # Add horizontal reference line at y = 0, in a dashed forest green
+  geom_hline(yintercept = 0, color = "forestgreen", linetype = "dashed") +
+  # Add vertical reference line at x = 0, in dashed forest green
+  geom_vline(xintercept = 0, color = "forestgreen", linetype = "dashed") + 
+  # Add histogram, specifying density instead of count, half transparency and binwidth of 12.5 starting at x = 0
+  geom_histogram(aes(y = ..density..), 
+                 alpha = 0.5, 
+                 color = "grey25", 
+                 binwidth = 12.5, 
+                 boundary = 0) + 
+  # Add density line in orange with a gaussian kernel density smoothing factor of 2^6
+  geom_density(color = "orange", n = 2^6, size = 1.0, kernel = "gaussian")+
+  # Add custom breaks on x axis
+  scale_x_continuous(breaks = seq(0, 500, 50)) + 
+  theme_minimal() + 
+  # Remove grids in panel
+  theme(panel.grid = element_blank()) + 
+  labs(y = "Density\n",
+       x = "\nAir Quality Index (AQI) values")
+
+aqi_histogram
+
+# Let's look at an untouched ggplotly conversion
+ggplotly(aqi_histogram)
+
+```
+
+In this case, the `ggplotly` conversion works wonderfully! I have little critique of it, except for the hover tooltip, which can be additionally customized, and the repeated orange density line at the horizontal intercept. It's a great example of why `ggplotly` can really streamline a workflow! In this case, I would likely remove the density curve, as it doesn't seem to add much information that we would be missing. For kicks, let's try to make a native `plotly` rendition:
+
+```{r aqi distribution 2}
+# Without modifications, base plotly plot
+plot_ly(data = ca_aqi %>% filter(aqi < 500), x = ~aqi, type = "histogram")
+```
+
+Note the very fine density -- the binwidth is really small, it might even be a width of 1 (turns out -- it is). If you hover your mouse over individual bars it'll return an individual AQI value. Neat!). Let's add a few more modifications to better match our original `ggplot` object, some of which can be found here: <https://plotly.com/r/histograms/>
+
+```{r aqi distributions 3}
+# Create functions for reference lines
+hline <- function(y = 0, color = "forestgreen") {
+  list(
+    type = "line",
+    # x extents of the reference line
+    x0 = 0,
+    x1 = 1,
+    xref = "paper",
+    # y extents will be determined by the input y = #
+    y0 = y,
+    y1 = y,
+    line = list(color = color, dash = "dot")
+  )
+}
+
+vline <- function(x = 0, color = "forestgreen") {
+  list(
+    type = "line",
+    # x extents determined by input x = #
+    x0 = x,
+    x1 = x,
+    xref = "paper",
+    y0 = 0,
+    # Note that I set the y boundary here
+    y1 = 0.4,
+    line = list(color = color, dash = "dot")
+  )
+}
+
+plot_ly(data = ca_aqi %>% filter(aqi < 500), x = ~aqi, type = "histogram",
+        # Change histogram to density function rather than counts, specify 40 bins in the entire range
+        histnorm = "probability", nbinsx = 40,
+        marker = list(color = "#adb5bd", line = list(color = "343a40", width = 2))) %>%
+  layout(shapes = list(hline(0), vline(0)), xaxis = list(title = "Air Quality Index (AQI) values"), yaxis = list(title = "Density\n"))
+
+```
+
+Since `plotly` begins plots at the origin (0,0) and doesn't "float" in space like `ggplot` does, the reference lines don't add much, in my opinion. Also, I couldn't find a way to programatically add a density plot to the `plotly` object (if anyone figures it out, please give a shout!), so in this use-case scenario, I recommend the `ggplotly` method.
+
+**Note** - We are going to be using some geographic information systems (GIS) packages such as `tigris` and `sf` in this module for demonstration purposes. You are going to get the opportunity to learn more about them in week 14 and week 15 where we have dedicated learning modules for GIS. So stay tuned!
+
+Let's move onto some bivariate plots!
+
+```{r add county information}
+# Use the tigris library again to pull county shapefiles 
+counties <- tigris::counties(state = "California", progress_bar = FALSE) %>%
+  clean_names() # Replaced rename_with(~ tolower(gsub(" ","_", .x, fixed=TRUE)))
+
+# Convert the ca_aqi dataset into an sf object, setting crs = 4269 (same as counties)
+ca_aqi_geo <- st_as_sf(ca_aqi, coords = c("lng", "lat"), crs = 4269)
+
+# Here, we'll indicate that we want to keep the geometry of ca_aqi (points, indicated by the lat/long) but we do want to know which counties it is within (y = counties)
+ca_aqi_geo <- sf::st_join(x = ca_aqi_geo, y = counties %>% rename("county" = "name") %>% select(county, geometry), left = TRUE)
+
+# You'll note that in the geometry field it stays as a sfc_POINT, instead of MULTIPOLYGON, and we have one more column called "county"
+head(ca_aqi_geo)
+```
+
+### AQI and Time Series Plots
+
+Great! Let's make a lineplot of AQI values over the temporal span of the dataset for a few select counties. For this step, since it won't be an explicitly geographic visualization, we can make a copy of the dataset that removes the geographic geometry to speed things along.
+
+```{r lineplot 1}
+# Create list of Bay Area Counties that we'll filter for
+bayarea_counties <- c("San Francisco", "Alameda", "Contra Costa", "Santa Clara", "San Mateo", "Marin", "Solano", "Sonoma", "Napa", "Santa Cruz", "San Benito")
+
+# Use st_drop_geometry to remove geographic component -- this saves computing power if you don't need geography!
+aqi_lineplot <- st_drop_geometry(ca_aqi_geo) %>%
+  # Select columns of interest -- we don't need much since it'll be AQI over timespan by county
+  select(date, aqi, category, county, population) %>%
+  # Filter observations that have a 'county' value in the list we made before
+  filter(county %in% bayarea_counties) %>%
+  # Create year and month indicator variables from date variable
+  mutate(year = lubridate::year(date),
+         month = lubridate::month(date),
+         quarter = lubridate::quarter(date)) %>%
+  # Group by month and year, and then county
+  group_by(year, county) %>%
+  # Get minimum date in each month/year/county combination
+  summarise(date = min(date),
+            # Calcuated an aqi average weighted by population
+            aqi = weighted.mean(aqi, population),
+            # Let's keep a population field just in case
+            pop = mean(population, na.rm = T))
+
+# Take a peek at the dataset
+head(aqi_lineplot)
+
+# Let's check that our filter worked correctly
+unique(aqi_lineplot$county)
+
+# It looks like not every county showed up -- which is a complete possibility; more rural geographies like Marin and Sonoma might not have monitors and may rely on simulation from other monitors in Napa or San Francisco proper. 
+
+# Just to check, we can check the unique counties in the overall ca_aqi_geo dataset: we do notice not every county makes it in!
+unique(ca_aqi_geo$county)
+
+# Let's move on and make this lineplot, first in ggplot!
+ggplot(data = aqi_lineplot, aes(x = date, y = aqi, color = county)) + 
+  # Add a line connecting observations
+  geom_line() +
+  # Can add geom_point if you'd like, may not be as legible
+  #geom_point(alpha = 0.5) + 
+  # Add horizontal reference line at the weighted mean of aqi values
+  geom_hline(yintercept = mean(aqi_lineplot$aqi), 
+             color = "gray25", linetype = "dashed", linewidth = 0.75) +
+  # Start x axis at 0
+  scale_x_date(expand = c(0,0)) +
+  # Give gridlines color grey at 98% transparency/alpha
+  theme(panel.grid = element_line(color = "grey98"),
+        # Give custom x and y axis lines at 70% grey, size 0.5
+        axis.line = element_line(color = "grey70", linewidth = 0.5),
+        # Give axis ticks that push into the plot instead of out
+        axis.ticks.length = unit(-0.25, "cm"),
+        # Indicate x axis ticks
+        axis.ticks.x = element_line(color = "grey40", linewidth = 0.5),
+        # Make white background
+        panel.background = element_rect(fill = "grey100", color = "grey100", linewidth = 0.5),
+        # Give custom position for legend
+        legend.position = c(0.70,0.95),
+        # Bold plot title
+        plot.title = element_text(face="bold")) +
+  # Customize legend for color, all contained in 1 row, and actual lines in legend are size 6
+  guides(color = guide_legend(nrow = 1, 
+                              byrow = TRUE, 
+                              override.aes = list(size = 6)))+
+  # Give legends. \n indicates newlines, which spaces out the titles
+  labs(x = "\nYears", 
+       y = "Air Quality Index (AQI) values \n",
+       color = "",
+       caption = "Horizontal reference line indicates average AQI value \n Data courtesy Environmental Protection Agency (EPA)",
+       title = "Time trends of Air Quality Index (AQI) values for Bay Area counties\n")
+```
+
+Next, I'll convert it to a `ggplotly` object with a customized hover text! Note that I have two major additions: the `text` argument in the `aes()` function, and the `group = 1` argument (a requirement when modifying the hover text). Then, I use the `ggplotly` function and inside it, I indicate that I want this custom hover text.
+
+The custom text aesthetic is built such that we have a string of text "Year:" concatenated to a variable (`lubridate::year(date)`, which returns the year value of the date of the observation). The concatenation is done by the `paste()` function.
+
+```{r}
+# Store modified ggplot code into object called lineplot
+lineplot <- ggplot(data = aqi_lineplot, 
+                   aes(x = date, y = aqi, color = county, 
+                       # Make custom text aesthetic
+                       text = paste("Year:", lubridate::year(date),
+                                    "\nAQI:", round(aqi,2),
+                                    "\nCounty:", county),
+                       group = 1)) + 
+  # Add a line connecting observations
+  geom_line() +
+  # Can add geom_point if you'd like, may not be as legible
+  # geom_point(alpha = 0.5) + 
+  # Add horizontal reference line at the weighted mean of aqi values
+  geom_hline(yintercept = mean(aqi_lineplot$aqi), 
+             color = "gray25", linetype = "dashed", size = 0.75) +
+  # Start x axis at 0
+  scale_x_date(expand = c(0,0)) +
+  # Give gridlines color grey at 98% transparency/alpha
+  theme(panel.grid = element_line(color = "grey98"),
+        # Give custom x and y axis lines at 70% grey, size 0.5
+        axis.line = element_line(color = "grey70", size = 0.5),
+        # Give axis ticks that push into the plot instead of out
+        axis.ticks.length = unit(-0.25, "cm"),
+        # Indicate x axis ticks
+        axis.ticks.x = element_line(color = "grey40", size = 0.5),
+        # Make white background
+        panel.background = element_rect(fill = "grey100", color = "grey100", size = 0.5),
+        # Give custom position for legend
+        legend.position = c(0.70,0.95),
+        # Bold plot title
+        plot.title = element_text(face="bold")) +
+  # Customize legend for color, all contained in 1 row, and actual lines in legend are size 6
+  guides(color = guide_legend(nrow = 1, 
+                              byrow = TRUE, 
+                              override.aes = list(size = 6)))+
+  #give legends. \n indicates newlines, which spaces out the titles
+  labs(x = "\nYears", 
+       y = "Air Quality Index (AQI) values \n",
+       color = "",
+       caption = "Horizontal reference line indicates average AQI value \n Data courtesy Environmental Protection Agency (EPA)",
+       title = "Time trends of Air Quality Index (AQI) values for Bay Area counties\n")
+
+# Convert to ggplotly object!
+ggplotly(lineplot, tooltip = "text")
+```
+
+I'm pretty happy with the `ggplotly` conversion! The most noticeable differences are:
+
+- The positions on the legend and tick marks on the x and y axes
+- Missing the specified caption. Optional challenge: try to find and implement a solution for this, and let me know what you find!
+
+Line plots, especially time trend plots like the one above, are where I find interactive plots especially helpful. This example is a **spaghetti plot**, which would require faceting or other visual changes to help clarify the display if it were static. In this case, I think that the spaghetti-ness can be alleviated somewhat by making the plot interactive! It's useful to be able to move about the plot, zoom in, and have the hover text clarify values that might be quite hard to parse if the plot were static. Additionally, one can click on an individual county to toggle it on/off -- thereby giving the viewer flexibility to simplify their graph viewing experience to reduce "spaghetti-ness" and understand the data piecewise.
+
+### Side-by-side bar charts / Demographic Pyramid
+
+Next, let's do a chart that we haven't explicitly covered before: side-by-side bar charts, or what population graphs are usually comprised of! The R for Epidemiologist Handbook and other resources also refer to this as a **Demographic Pyramid**. I'm referencing these posts for the following code: 
+
+Cut for R (make categories of AQI values): <https://r-coder.com/cut-r/>
+Population Pyramid in ggplot: <https://stackoverflow.com/questions/14680075/simpler-population-pyramid-in-ggplot2>
+Skipping discrete labels: <https://stackoverflow.com/questions/66275692/r-skip-labels-in-discrete-x-axis>
+R Epidemiologist Handbook Chapter 33: <https://epirhandbook.com/en/demographic-pyramids-and-likert-scales.html>
+
+```{r aqi sbs 1}
+# Create dataset for side-by-side barchart of AQI values, done without geometry
+aqi_cut_cat <- st_drop_geometry(ca_aqi_geo) %>%
+  # Create categories with breaks every 20 units of AQI 
+  mutate(aqi_cat = cut(ca_aqi_geo$aqi, breaks = seq(0, 600, 20))) %>%
+  # Group by county and AQI category
+  group_by(county, aqi_cat) %>%
+  # Get number of counts in each county-aqi category combination
+  summarise(n = n()) %>%
+  # Filter out NAs in aqi_cat (when they're larger than 600)
+  filter(is.na(aqi_cat) == FALSE)
+
+
+# Filter dataset to be SF and LA counties
+aqi_sbs_plot <- ggplot(data = aqi_cut_cat %>% filter(county %in% c("San Francisco", "Los Angeles")), 
+       # If county is SF, make the counts "negative"
+       mapping = aes(x = if_else(county == "San Francisco", true = -n, false = n), 
+                     # y axis will be the categories, encoding by county
+                     y = aqi_cat, color = county, fill = county)) +
+  geom_col(alpha = 0.5, size = 0.5) +
+  # Absolute value for labels on the x axis (so negative counts will be positive!); 10 breaks in total
+  scale_x_symmetric(labels = abs, n.breaks = 10) +
+  # Take every first label (TRUE), skip every second label (FALSE)
+  scale_y_discrete(breaks = function(x){x[c(TRUE, FALSE)]}) +
+  # Give manual color choices
+  scale_fill_manual(values = c("#81b29a", "#4361ee")) +
+  scale_color_manual(values = c("#81b29a", "#4361ee")) +
+  # Remove background fill
+  theme(panel.background = element_rect(fill = NA),
+        # Remove y gridlines
+        panel.grid.major.y = element_blank(),
+        # Emphasize major x gridlines
+        panel.grid.major.x = element_line(color = "grey90", linetype = "dashed"),
+        # Remove minor x gridlines
+        panel.grid.minor.x = element_blank(),
+        # Bold axis and legend titles
+        axis.title = element_text(face = "bold"),
+        legend.title = element_text(face = "bold"),
+        # Modify legend position and background
+        legend.position = c(0.8, 0.8),
+        legend.background = element_rect(color = "grey90")) +
+  # Remove legend for color (duplicates fill)
+  guides(color = "none") +
+  # Custom lables
+  labs(x = "\nCount",
+       y = "Air Quality Index (AQI) bins\n",
+       fill = "County")
+
+aqi_sbs_plot
+
+# What does the native ggplotly conversion look like?
+ggplotly(aqi_sbs_plot)
+```
+
+Again, the `ggplotly` conversion looks so good that I am not very tempted to recreate a native `plotly` object, and some exploration online to find out how to do so suggests the relative difficulty of such a task. Therein lies the strength of `ggplot` and `plotly` working harmoniously through `ggplotly` -- missing or to-be-developed features in `plotly` do not necessarily need to be given up if you can make do with some workarounds in `ggplot.` 
+
+Let's modify the hover text of the chart above for `ggplotly`, just to round out a HTML/webpage ready visualization. These more complex visualizations with comparison usage scenarios are really where interactivity can shine!
+
+```{r aqi sbs 2}
+# Filter dataset to be SF and LA counties
+aqi_sbs_plot_2 <- ggplot(data = aqi_cut_cat %>% filter(county %in% c("San Francisco", "Los Angeles")), 
+       # If county is SF, make the counts "negative"
+       mapping = aes(x = if_else(county == "San Francisco", true = -n, false = n), 
+                     # y axis will be the categories, encoding by county
+                     y = aqi_cat, color = county, fill = county, 
+                     text = paste("County:", county,
+                                  "\nAQI Category:", aqi_cat,
+                                  "\nCount:", abs(n)))) +
+  geom_col(alpha = 0.5, size = 0.5) +
+  # Absolute value for labels on the x axis (so negative counts will be positive!); 10 breaks in total
+  scale_x_symmetric(labels = abs, n.breaks = 10) +
+  # Take every first label (TRUE), skip every second label (FALSE)
+  scale_y_discrete(breaks = function(x){x[c(TRUE, FALSE)]}) +
+  # Give manual color choices
+  scale_fill_manual(values = c("#81b29a", "#4361ee")) +
+  scale_color_manual(values = c("#81b29a", "#4361ee")) +
+  # Remove background fill
+  theme(panel.background = element_rect(fill = NA),
+        # Remove y gridlines
+        panel.grid.major.y = element_blank(),
+        # Emphasize major x gridlines
+        panel.grid.major.x = element_line(color = "grey90", linetype = "dashed"),
+        # Remove minor x gridlines
+        panel.grid.minor.x = element_blank(),
+        # Bold axis and legend titles
+        axis.title = element_text(face = "bold"),
+        legend.title = element_text(face = "bold"),
+        plot.title = element_text(face = "bold"),
+        # Modify legend position and background
+        legend.position = c(0.8, 0.8),
+        legend.background = element_rect(color = "grey90")) +
+  # Remove legend for color (duplicates fill)
+  guides(color = "none") +
+  # Custom lables
+  labs(x = "\nCount",
+       y = "Air Quality Index (AQI) bins\n",
+       fill = "County", 
+       title = "Comparing AQI distributions across SF and LA counties")
+
+ggplotly(aqi_sbs_plot_2, tooltip = "text")
+```
+
+### Bubble charts
+
+Next, let's take a look at bubble charts. The principles here can be extended to conventional scatterplots. Again, interactivity here is really useful -- you can easily take a look at outliers in your EDA process, and these graphs can be more accessible and immediately actionable to a lay audience viewing your interactive report. I'd like to focus on making sure, as we have with the previous plots, that we pay attention to classic data visualization principles however -- we still run the risk of overplotting, and we should ensure that hover texts are clear, legible, and present relevant information. 
+
+Below, we take a look at AQI and population (two continuous variables) at the city-region level, with differential sizing of dots by population density. You may notice that our first plot is very busy on the left-hand side -- many observations (in this case, city-regions) sit along a smaller population size. There's a few outliers on the right-hand side that can be explored immediately using `plotly`, as we'll see in a bit. 
+
+What's a strategy we can use to address this overplotting on the left-hand side while still preserving the general relationships we see in these data? This may be covered more in biostatistics courses, but you can *transform* variables to normalize and/or linearize the relationships between variables. There are some benefits (and drawbacks) in terms of model fitting and interpretation of results, but for now, we'll operate on the knowledge that transforming variables is an existing practice and can be a viable tool in data visualization as well!
+
+Also in the spirit of sharing the visualization thought process, here are some search strings I used while making these plots and the links that eventually helped:
+
+- "exponents ggplot2 labels": <https://stackoverflow.com/questions/33149505/adding-exponent-to-axes-labels-r-ggplot2>
+- "non scientific labels ggplot axis": <https://stackoverflow.com/questions/14563989/force-r-to-stop-plotting-abbreviated-axis-labels-scientific-notation-e-g-1e>
+
+```{r aqi bubble 1}
+# Make our dataset
+data_bubble <- ca_aqi %>%
+  # Group by city-region
+  group_by(city_ascii) %>%
+  # Create weighted AQI measure, mean of population, mean of density
+  summarise(aqi = weighted.mean(aqi, population),
+            population = mean(population),
+            density = mean(density))
+
+ggplot(data = data_bubble, aes(x = population, y = aqi)) +
+  # Bubbles are symbolized dynamically in color and size by density
+  geom_point(aes(size = density, color = density)) +
+  # Change x axis labels from scientific to commas
+  scale_x_continuous(labels = scales::comma) +
+  # Use viridis color palette
+  scale_color_viridis_c()+
+  # Set the range of sizes that bubbles can take on
+  scale_size(range = c(1, 20), 
+             # We also scale the size (driven by density) by cubing it, emphasizing larger values
+             trans = scales::trans_new(name = "cube", 
+                                       transform = function(x) x**3, 
+                                       inverse = function(x) x**3)) +
+  # Add stata theme (from ggthemes package)
+  theme_stata() + 
+  # Take out size legend
+  guides(size = "none") +
+  # Increase width of color legend
+  theme(legend.key.width = unit(1.85, "cm")) +
+  # Labels
+  labs(color = expression(paste("Density (person per ", km^{2}, ")")),
+       x = "\nPopulation Size (natural log)",
+       y = "AQI\n (population weighted average) \n")
+```
+
+The results are interesting, and don't look half-bad, especially with the preset Stata theme. To address the overplotting on the left-hand side, however, we're going to perform a log-transformation on `population`, the x-axis. Remembering back to our algebra roots, this translates to very large values shrinking down, and very small units will increase in relative size. In general, log-transformations are great for skewed data, which we have here with the `population` variable. Take a look at the difference:
+
+```{r aqi bubble 2}
+# Lets make a static ggplot, now with a log-transformation for population -- 
+aqi_bubble <- ggplot(data = data_bubble, aes(x = log(population), y = aqi)) +
+  geom_point(aes(size = density, color = density)) +
+  scale_x_continuous(labels = scales::comma) +
+  scale_color_viridis_c()+
+  scale_size(range = c(1, 20), 
+             trans = scales::trans_new(name = "cube", 
+                                       transform = function(x) x**3, 
+                                       inverse = function(x) x**3)) +
+  theme_stata() + 
+  guides(size = "none") +
+  theme(legend.key.width = unit(1.80, "cm")) +
+  labs(color = expression(paste("Density (person per ", km^{2}, ")")),
+       x = "\nPopulation Size (natural log)",
+       y = "AQI\n (population weighted average) \n")
+
+aqi_bubble
+```
+
+The general plot looks a lot less crowded on the left-hand side! This transformation also now suggests a fairly linear relationship between the natural log of population size and AQI measures, which may or may not be true. This should be taken into consideration when using transformations in any analysis or visualization. Further, we want to emphasize the interpretability of log (or any) transformations -- it can be confusing for many audiences and should be reserved for those who may be familiar with the practice (showing EDA to your biostatistics advisor, for example).
+
+Next, we'll convert the `ggplot` object we just made using `ggplotly.`
+
+```{r aqi bubble 3}
+# Convert into a plotly object using ggplotly
+ggplotly(aqi_bubble)
+```
+
+You'll notice that this conversion isn't the most successful -- most things carry over, but the font became serif from sans serif, the legend for city is still present, and the legend for density has an incorrect title. However, it is still convenient to explore the outliers (Riverside, Los Angeles, for example), using the plot.
+
+Let's try to make an alternative with native `plotly`.
+
+Here's the `plotly` page for bubble charts: <https://plotly.com/r/bubble-charts/>
+
+```{r aqi bubble 4}
+# Plotly object reference same dataset as before
+plot_ly(data_bubble,
+        x = ~log(population),
+        y = ~aqi,
+        color = ~density,
+        # Next two lines define scatterplot
+        type = 'scatter',
+        mode = 'markers',
+        # Inclusion of size argument makes it a bubble chart, here we scale by x^3 for clarity
+        size = ~density**3,
+        # Range of sizes that bubbles can take on
+        sizes = c(10, 2500),
+        # Give bubbles transparency/alpha of 0.75
+        marker = list(opacity = 0.75),
+        hoverinfo = 'text',
+        # Custom hover text, <b> text </b> means bolded text
+        text = ~paste("<b>City/Region:</b>", city_ascii,
+                      #<br> means a newline, or break, here we round aqi to 2 digits
+                      "<br><b>AQI (pop-weighted mean):</b>", round(aqi, 2), 
+                      "<br><b>Population:</b>", population, 
+                      "<br><b>Density (people per sq km):</b>", density)) %>%
+  # Like ggplot, different parts of the layout get identical arguments
+  layout(xaxis = list(showgrid = FALSE, title = "Population size (natural log)", 
+                      # Give border lines for x axis
+                      linecolor = "black", linewidth = 1),
+         yaxis = list(title = "AQI \n(population-weighted average)", 
+                      linecolor = "black", linewidth = 1),
+         # Remove legend for size
+         showlegend = FALSE,
+         # Background color
+         paper_bgcolor = 'rgb(225, 240, 245)',
+         # Custom font
+         font = list(family = "Arial", size = 12)) %>%
+  # Title of color legend
+  colorbar(title = "Density \n(people per sq km)") 
+```
+With these modifications annotated in the code, I'm reasonable happy with the parity between this `plotly` graph and `ggplot` original. I prefer the scaling of the `plotly` plot, which accentuates how much more dense San Francisco is compared to peer city/regions (and the sans serif font). You can achieve the same using `scales::`. Of course, as you can throughout any module, feel free to modify code as you go along to see how it affects your final visualization -- it's the best way to learn!
+
+## Alternative graphing library: ggigraph
+
+`ggigraph` is a newer graphing library that, likely `ggplotly`, also attempts to bridge `ggplot2` objects with interactivity. It offers some features that should be interesting to implement for interactive documents, like linked units across graphs (which will be showcased shortly). From their documentation, the necessary syntax adjustments we'd like to make aside from our standard `ggplot2` syntax include:
+
+ - add `_interactive` to the geom names (for example, change `geom_point` to `geom_point_interactive`)
+ - add `tooltip`, `data_id`, or both to the `aes` function
+ - `tooltip`: what is displayed when hovering over a graphic element
+ - `data_id`: unique IDs for units that we'd like to assign linked interactivity to 
+ - render the plot with the girafe function (note the spelling)
+ 
+Let's extend the graphs we've already made by making a combined plot of AQI trends over time and population density bubble charts.
+
+```{r ggigraph, fig.height=15}
+
+# Let's copy our lineplot from before, with some additions
+lineplot_igraph <- ggplot(data = aqi_lineplot, 
+                          aes(x = date, y = aqi, color = county, 
+                          # Note we add these two arguments to indicate the hover text
+                          # And the interactive grouping 
+                          data_id = county, tooltip = county)) + 
+  # Add a line connecting observations NOTING that it is _interactive
+  geom_line_interactive() +
+  # Can add geom_point if you'd like, may not be as legible
+  #geom_point(alpha = 0.5) + 
+  # Add horizontal reference line at the weighted mean of aqi values
+  geom_hline(yintercept = mean(aqi_lineplot$aqi), 
+             color = "gray25", linetype = "dashed", linewidth = 0.75) +
+  # Start x axis at 0
+  scale_x_date(expand = c(0,0)) +
+  # Give gridlines color grey at 98% transparency/alpha
+  theme(panel.grid = element_line(color = "grey98"),
+        # Give custom x and y axis lines at 70% grey, size 0.5
+        axis.line = element_line(color = "grey70", linewidth = 0.5),
+        # Give axis ticks that push into the plot instead of out
+        axis.ticks.length = unit(-0.25, "cm"),
+        # Indicate x axis ticks
+        axis.ticks.x = element_line(color = "grey40", linewidth = 0.5),
+        # Make white background
+        panel.background = element_rect(fill = "grey100", color = "grey100", linewidth = 0.5),
+        # Give custom position for legend
+        legend.position = c(0.70,0.95),
+        # Bold plot title
+        plot.title = element_text(face="bold")) +
+  # Customize legend for color, all contained in 1 row, and actual lines in legend are size 6
+  guides(color = guide_legend(nrow = 1, 
+                              byrow = TRUE, 
+                              override.aes = list(size = 6)))+
+  # Give legends. \n indicates newlines, which spaces out the titles
+  labs(x = "\nYears", 
+       y = "Air Quality Index (AQI) values \n",
+       color = "",
+       caption = "Horizontal reference line indicates average AQI value \n Data courtesy Environmental Protection Agency (EPA)",
+       title = "Time trends of Air Quality Index (AQI) values for Bay Area counties\n")
+
+# We call the igraph object with the following function:
+
+girafe(ggobj = lineplot_igraph, 
+       # These options simply indicate we'd like the colors to extend to the hover
+       # By default, the hover has white text on a black background
+       options = list(opts_tooltip(use_fill = TRUE)))
+
+# Next, let's do the same with the population density against aqi scatterplot (we're not able to make bubble charts with ggigraph, yet)
+aqi_scatter_igraph <- ggplot(data = aqi_lineplot %>% 
+                              group_by(county) %>%
+                              summarise(aqi = weighted.mean(aqi, pop),
+                                        population = mean(pop)), aes(x = log(population), y = aqi, 
+                                                    # Remember our additions
+                                                    data_id = county, tooltip = county)) +
+  # Remember to make our geom interactive
+  geom_point_interactive() +
+  scale_x_continuous(labels = scales::comma) +
+  scale_color_viridis_c()+
+  scale_size(range = c(1, 20), 
+             trans = scales::trans_new(name = "cube", 
+                                       transform = function(x) x**3, 
+                                       inverse = function(x) x**3)) +
+  theme_stata() + 
+  guides(size = "none") +
+  # theme(legend.key.width = unit(1.80, "cm")) +
+  labs(color = expression(paste("Density (person per ", km^{2}, ")")),
+       x = "\nPopulation Size (natural log)",
+       y = "AQI\n (population weighted average) \n")
+
+
+# Next, we call our ggigraph object
+girafe(ggobj = aqi_scatter_igraph, 
+       options = list(opts_tooltip(use_fill = TRUE)))
+```
+
+This was a brief introduction to ggigraph, but hopefully it illustrates the potential to combine graphs and cross-reference the same units. Since it is still a new package, however, visual customization is limited (note how we were not able to symbolize geom_point_interactive by a dynamic size).
+
+
+## Interactive Tables in R
+
+While this course has not devoted much time to visualizing tables, based on the assumption that you have covered table construction in your stats courses, they are intrinsically tied into communicating data. In any public health practice that involves data, tables are just as important as visualizations (and in some cases, even more so!). This section aims to give a quick overview of interactive tables that R users can leverage in interactive reports. 
+
+**A note on accessibility**: A neat thing about both `dt` and `reactable` is that since both generate a HTML table, the resulting output(s) should be compatible with screen readers, making your interactive documents accessible to a wider audience!
+
+We'll be exploring these two packages:
+
+**DT / datatables**: A venerated javascript library for interactive tables <https://rstudio.github.io/DT/>
+
+**reactable**: A newer library in development, with simpler syntax: <https://glin.github.io/reactable/index.html>
+
+Let's start first with **datatables**! We'll be using the same dataset that we made for the bubble chart, for ease. 
+
+```{r aqi table 1}
+# Wrapping our dataset in the datatable function to start
+datatable(data_bubble)
+```
+
+The default result is usable! As you can test for yourself, it's an interactive paginated version of what our data viewer in R is, but it'll stay interactive when knit to an HTML file! There's a few options for customization and improvement we can explore.
+
+Let's first start with some **visual changes**: 
+
+```{r aqi table 2}
+datatable(data_bubble,
+          #add CSS class for theming
+          class = 'cell-border stripe',
+          #remove numbered index
+          rownames = FALSE,
+          #add custom column names instead of renaming columns
+          colnames = c("City/Region", "AQI (population-weighted average)", 
+                       "Population", "Density (people per sq. km)")) %>%
+  #bold the `city_ascii` column
+  formatStyle("city_ascii", fontWeight = "bold") %>%
+  #round the `aqi` column to one decimal place
+  formatRound("aqi", 1) %>%
+  #format the `aqi` column to have red text over values of 75, black otherwise
+  formatStyle(c("aqi"), 
+              color = styleInterval(c(75), c("black", "red")), 
+              #bold values over 75, normal weight otherwise
+              fontWeight = styleInterval(c(75), c("normal", "bold")))
+```
+
+Next, let's look at some functional customizations:
+
+```{r aqi table 3}
+datatable(data_bubble,
+          # Add CSS class for theming
+          class = 'cell-border stripe',
+          # Remove numbered index
+          rownames = F,
+          # Add custom column names instead of renaming columns
+          colnames = c("City/Region", "AQI (population-weighted average)", 
+                       "Population", "Density (people per sq. km)"),
+          # Add buttons to export the data within the html (cool!)
+          # Note that the `dom` argument can accept many, check out documentation for more
+          # By calling `Btp`, we keep buttons (B), the table itself (t), and pagination control (p) 
+          extensions = 'Buttons', options = list(dom = 'Btpl',
+                                                 buttons = c('copy', 
+                                                             'csv', 
+                                                             'excel', 
+                                                             'pdf', 
+                                                             'print'),
+                                                 # How many entries per page
+                                                 pageLength = 10,
+                                                 # Options for "Show how many entries"
+                                                 lengthMenu = c(10, 20, 30))) %>%
+  # Bold the `city_ascii` column
+  formatStyle("city_ascii", fontWeight = "bold") %>%
+  # Round the `aqi` column to one decimal place
+  formatRound("aqi", 1) %>%
+  # Format the `aqi` column to have red text over values of 75, black otherwise
+  formatStyle(c("aqi"), 
+              color = styleInterval(c(75), c("black", "red")), 
+              # Bold values over 75, normal weight otherwise
+              fontWeight = styleInterval(c(75), c("normal", "bold")))
+```
+
+This is only a survey of a very few functions available in datatable, so do check out the aforementioned documentation to learn more!
+
+Now, let's move onto **reactable**:
+
+Again, `reactable` is a newer library and may offer simpler construction and more flexibility than `dt`. It still is in development however, so documentation and help may not be as available.
+
+For this, we'll use the dataset we used for the earlier lineplot to showcase convenient functionality to group table entries by a categorical variable (in this case, grouping observations each year by county).
+
+```{r aqi table 4}
+# Subset out an unneeded column, groupby county
+reactable(aqi_lineplot %>% select(-date), groupBy = 'year',
+          # Rename first column
+          columns = list(county = colDef(name = "County"),
+                         # Rename second column
+                         year = colDef(name = "Year"),
+                         # Rename third column, rounding to 1 digit
+                         aqi = colDef(name = "AQI", format = colFormat(digits = 1))))
+```
+
+We can already see a few stylistic changes, with `reactable` leaning towards a more minimalist design language, which might be preferable. I would argue that the use case I presented with this dataset isn't actually very useful in a table format (it would make sense to be able to more easily compare across countries and years), but hopefully it illustrates the possibilities with `reactable.`
+
+Another neat feature afforded by both `dt` and `reactable` is the inclusion of plots right within our tables! When distributions of a variable of interest vary by a grouping variable or geography, it can be extremely useful and succinct to include these. Here's an example below using our main CA AQI dataset grouped by year, drawing directly from documentation found here: <https://glin.github.io/reactable/articles/examples.html#custom-rendering>
+
+```{r aqi table 5}
+reactable_data <- ca_aqi %>%
+  # Create year variable from date variable
+  mutate(year = lubridate::year(date)) %>%
+  # Group by year
+  group_by(year) %>%
+  # New aqi variable will be a list of all aqi values in that year
+  summarise(aqi = list(aqi)) %>%
+  # Make empty variables for boxplot and sparkline
+  mutate(boxplot = NA, sparkline = NA)
+
+reactable(reactable_data, 
+          columns = list(
+            # Barchart for aqi values in a year, max chart range of 500
+                aqi = colDef(cell = function(values) {
+                  sparkline(values, type = "bar", 
+                            chartRangeMin = 0, chartRangeMax = 500)
+                }),
+                # Boxplot for aqi values in a year
+                boxplot = colDef(cell = function(value, index) {
+                  sparkline(reactable_data$aqi[[index]], type = "box", 
+                            chartRangeMin = 0, chartRangeMax = 200)
+                }),
+                # Lineplot for aqi values in a year
+                sparkline = colDef(cell = function(value, index) {
+                  sparkline(reactable_data$aqi[[index]])
+                })
+))
+```
+
+
+And there you have it! A brief survey of just some of several interactivity methods available to us in R. There are unlimited possibilities in visualization, and while some are more involved than others (and may require more patience with searching up documentation), the deep investment in development within the R community points to having a solution more often than not. We recommend you exploring the linked resources at the beginning of this module (especially `plotly`'s) for more examples. As always, post any questions to EdStem!
