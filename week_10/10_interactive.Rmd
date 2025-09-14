@@ -106,7 +106,7 @@ Throughout this module, you will want to **Knit to HTML**, which stands for *Hyp
 week = params$week
 
 # Load rdata file with raw data
-load(file = here(week, "data", "ca_aqi.rds"))
+load(file = here(week, "data", "ca_aqi.rdata"))
 
 # Take a peek!
 head(ca_aqi)
@@ -192,50 +192,78 @@ bar_static
 Now that we've made this aggregated dataset and `ggplot` object with different methods that we know and love, let's convert it to an interactive `plotly` object. The process is extremely straightforward -- we drop our `ggplot` object into `ggplotly()`, a function that converts it to a `plotly` object.
 
 ```{r aqi categories 3}
-# Convert this into a plotly object using `ggplotly()` wrapped around the ggplot2 object -- it's that easy!
+# Load required libraries
+library(dplyr)      # for data manipulation with %>% and mutate()
+library(ggplot2)    # for data visualization (grammar of graphics)
+library(forcats)    # for factor reordering (fct_rev)
+library(stringr)    # for string wrapping of long labels
+library(plotly)     # for interactive visualizations (ggplotly)
 
-# Make the same ggplot object as above, just adding the `text` object in aes() to use in the interactive hover text
-bar_static <- ggplot(data = aqi_categories_percentage, aes(y = category, 
-                                                           x = percentage, 
-                                                           fill = category,
-                                                           #the hover text will read "Percentage: ##%"
-                                                           text = paste("Percentage:", percentage))) +
-  #geom col, encode by category, border of size 1, fill of alpha/transparency 0.5
-  geom_col(aes(color = category), size = 1, alpha = 0.5) + 
-  # Add data labels of percentage + %, text color is white, adjust horizontal position, bolded
-  geom_label(aes(label = paste(percentage, "%")), color = "white", hjust = -0.25, fontface = "bold") + 
-  # Reverse direction of y-axis categories, add text wrap to labels (multiline)
-  scale_y_discrete(limits = rev(levels(aqi_categories_percentage$category)),
-                   labels = label_wrap(10)) +
-  # Add manual fill and color scales to match color categories given for AQI 
-  scale_fill_manual(values = c("green3", "gold", "orange", "red", "purple", "maroon")) + 
-  scale_color_manual(values = c("green3", "gold", "orange", "red", "purple", "maroon")) + 
-  # Adjust x axis start point
-  scale_x_continuous(expand = c(0,1), limits = c(0, 65)) +
-  # Add white background
-  theme(panel.background = element_rect(fill = "white"),
-        # Take out grid
-        panel.grid = element_blank(),
-        # Take out ticks 
-        axis.ticks = element_blank(),
-        # Add custom x axis line
-        axis.line.x = element_line(color = "grey90", size = 1.25),
-        # Bold axis titles, make a medium-darkness gray
-        axis.title = element_text(color = "grey60", face = "bold"),
-        # Bold axis text (categories), make medium grey
-        axis.text = element_text(color = "grey60", face = "bold")) + 
-  # Remove legends for fill and color
-  guides(fill = "none",
-         color = "none") +
-  # Remove y axis title, add x axis title
-  labs(y = "",
-       x = "Percentage (%)")
+# Reverse the order of categories so bars display from top to bottom
+aqi_plot_data <- aqi_categories_percentage %>%
+  mutate(
+    # If 'category' is already a factor, just reverse it
+    # Otherwise, first convert to factor and then reverse
+    category = if (is.factor(category)) forcats::fct_rev(category)
+               else forcats::fct_rev(factor(category))
+  )
 
+# Build the static ggplot object
+bar_static <- ggplot(
+  data = aqi_plot_data,          # dataset for plotting
+  aes(
+    y = category,                # categories on the y-axis
+    x = percentage,              # percentage values on the x-axis
+    fill = category,             # fill color by category
+    text = paste("Percentage:", percentage) # custom hover text for plotly
+  )
+) +
+  # Draw bars with semi-transparent fill and colored outlines
+  geom_col(aes(color = category), linewidth = 1, alpha = 0.5) +
+  
+  # Add white percentage labels inside bars, nudged slightly right
+  geom_label(
+    aes(label = paste0(percentage, "%")),  # label text: "##%"
+    color = "white",                       # label text color
+    hjust = -0.25,                         # horizontal adjust (move right)
+    fontface = "bold"                      # bold font for emphasis
+  ) +
+  
+  # Wrap long y-axis labels at ~10 characters to prevent overlap
+  scale_y_discrete(labels = function(x) stringr::str_wrap(x, width = 10)) +
+  
+  # Manual color scales (fill + outline) to match AQI categories
+  scale_fill_manual(values = c("green3", "gold", "orange", "red", "purple", "maroon")) +
+  scale_color_manual(values = c("green3", "gold", "orange", "red", "purple", "maroon")) +
+  
+  # Adjust x-axis: start at 0, end at 65, with no extra padding left
+  scale_x_continuous(
+    limits = c(0, 65),                          # axis range
+    expand = expansion(mult = c(0, 0), add = c(0, 1)) # remove left padding, add small right padding
+  ) +
+  
+  # Apply a clean theme for readability
+  theme(
+    panel.background = element_rect(fill = "white"), # white background
+    panel.grid = element_blank(),                   # no grid lines
+    axis.ticks = element_blank(),                   # no axis ticks
+    axis.line.x = element_line(color = "grey90", linewidth = 1.25), # subtle x-axis line
+    axis.title = element_text(color = "grey60", face = "bold"),     # bold grey axis titles
+    axis.text  = element_text(color = "grey60", face = "bold")      # bold grey axis text
+  ) +
+  
+  # Remove redundant legends (fill and color already obvious)
+  guides(fill = "none", color = "none") +
+  
+  # Label axes (y left blank since categories are self-explanatory)
+  labs(y = NULL, x = "Percentage (%)")
 
-# Referencing the text object in the ggplotly call
-ggplotly(bar_static, tooltip = "text") %>%
-  # Remove legend through a plotly function, ggplotly doesn't translate guides correctly
-  layout(showlegend = FALSE)
+# Convert the static ggplot to an interactive plotly object
+p <- ggplotly(bar_static, tooltip = "text") %>%  # show custom hover text
+  layout(showlegend = FALSE)                     # explicitly hide legend
+
+# Print interactive plot
+p
 ```
 
 You'll notice there's a few issues, though -- there's a ton of error messages that suggest that `plotly` doesn't understand a lot of these additional modifications. For example, the `geom_label()` doesn't appear.
