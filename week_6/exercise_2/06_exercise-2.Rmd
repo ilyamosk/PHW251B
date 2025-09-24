@@ -56,7 +56,7 @@ str(data)
 
 # Question 1 
 
-Let's try combine some of these aesthetics from `Module: Scatterplots`! Let's create a new plot from the `cities_clean` dataset displaying the relationship between `hours_sun` and `obesity`. Let's also set the alpha to be responsive to `gym_cost` to display a third variable.
+Let's try combine some of these aesthetics from `Module: Scatterplots`! Let's create a new plot from the `cities_clean` dataset displaying the relationship between `hours_sun` (x-axis) and `obesity` (y-axis). Let's also set the alpha to be responsive to `gym_cost` to display a third variable.
 
 ```{r}
 # Type your answer here
@@ -67,7 +67,7 @@ Let's try combine some of these aesthetics from `Module: Scatterplots`! Let's cr
 
 ### Question 2
 
-Let's take moment to explore the options with lines of best fit. Take a look at the documentation for `geom_smooth` and find and implement the argument for the LOESS method. Then, create a **horizontal** reference line at the 90th percentile of `avg_hours_worked`.  (Hint - use `?geom_smooth`)
+Now plot the relationship between `hours_sun` (x-axis) and `avg_hours_worked` (y-axis). Take a look at the documentation for `geom_smooth` and find and implement the argument for the LOESS method. Then, create a **horizontal** reference line at the 90th percentile of `avg_hours_worked`.  (Hint - use `?geom_smooth`)
 
 ```{r}
 # Type your answer here
@@ -78,7 +78,7 @@ Let's take moment to explore the options with lines of best fit. Take a look at 
 
 ### Question 3
 
-From what we've covered in `Module: Scatterplots`, let's make a plot with the `data` dataframe that we imported at the beginning of, as seen before, where we plot `hours_sun` against `avg_hours_worked`, with each city labeled and the size of labels determined by rank (a better rank making a bigger label). Let's go a step further and symbolize the data labels of each city by a different color. Further, let's remove the confidence intervals. If you want, take a look at the documentation for `geom_text` and see if there's an argument to remove overlapping labels. Finally, remember to apply the classic theme. (Hint - use `?geom_text` and look into the `ggrepel` function from the `ggrepel` package)
+Now plot the relationship between `hours_sun` (x-axis) and `avg_hours_worked` (y-axis). Instead of creating the horizontal reference line, label point with the `city` name and the control the size of points using the `rank` column (a better rank making a bigger label). Let's go a step further and symbolize the data labels of each city by a different color. Further, let's remove the confidence intervals. If you want, take a look at the documentation for `geom_text` and see if there's an argument to remove overlapping labels. Finally, remember to apply the classic theme. (Hint - use `?geom_text` and look into the `ggrepel` function from the `ggrepel` package)
 
 ```{r}
 # Type your answer here
