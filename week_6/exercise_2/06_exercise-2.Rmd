@@ -78,7 +78,7 @@ Now plot the relationship between `hours_sun` (x-axis) and `avg_hours_worked` (y
 
 ### Question 3
 
-Now plot the relationship between `hours_sun` (x-axis) and `avg_hours_worked` (y-axis). Instead of creating the horizontal reference line, label point with the `city` name and the control the size of points using the `rank` column (a better rank making a bigger label). Let's go a step further and symbolize the data labels of each city by a different color. Further, let's remove the confidence intervals. If you want, take a look at the documentation for `geom_text` and see if there's an argument to remove overlapping labels. Finally, remember to apply the classic theme. (Hint - use `?geom_text` and look into the `ggrepel` function from the `ggrepel` package)
+Now plot the relationship between `hours_sun` (x-axis) and `avg_hours_worked` (y-axis). Instead of creating the horizontal reference line, label point with the `city` name and the control the size of label using the `rank` column (a better rank making a bigger label). Let's go a step further and symbolize the data labels of each city by a different color. Further, let's remove the confidence intervals. If you want, take a look at the documentation for `geom_text` and see if there's an argument to remove overlapping labels. Finally, remember to apply the classic theme. (Hint - use `?geom_text` and look into the `ggrepel` function from the `ggrepel` package)
 
 ```{r}
 # Type your answer here
