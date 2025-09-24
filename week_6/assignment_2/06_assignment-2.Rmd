@@ -13,7 +13,7 @@ params:
 library(formatR)
 library(tidyverse)
 knitr::opts_chunk$set(echo = TRUE, tidy = TRUE, warning = F, message = F, tidy.opts = list(width.cutoff = 85))
-
+library(janitor)
 # Load libraries
 library(NHANES)
 library(tidyverse)
@@ -107,14 +107,14 @@ The `dim` function tell us the **rows** (10000) and **columns** (76) of the data
 
 ### Granularity 
 
-Here, we can use the `unique` function that we learned a few modules ago, and use the `length` function to see how many rows we have with the input. If we get the length of unique rows in what is supposed to be a uniquely-identifying variable (in this case, the ID variable), then we can compare to the total number of rows in the dataset to get a sense of granularity. 
+Here, we can use the `unique` function that we learned a few modules ago, and use the `length` function to see how many rows we have with the input. If we get the length of unique rows in what is supposed to be a uniquely-identifying variable (in this case, the `id` variable), then we can compare to the total number of rows in the dataset to get a sense of granularity. 
 
 ```{r granularity}
-#get the number of unique values in the ID variable of the dataset
+#get the number of unique values in the `id` variable of the dataset
 length(unique(data$ID))
 ```
 
-There's 6779 unique values in the ID field, when there's 10000 observations in the total dataset! This could mean several things -- that perhaps each observation *is* unique but needs another identifying variable (say, for example, `SurveyYr`) in combination. 
+There's 6779 unique values in the `id` field, when there's 10000 observations in the total dataset! This could mean several things -- that perhaps each observation *is* unique but needs another identifying variable (say, for example, `survey_yr`) in combination. 
 
 If you take a deeper dive into the metadata, you'll find that this dataset has been weighted in certain ways to be demographically representative of the United States, or that it can act as a simple random sample (SRS). That means observations may have been duplicated to create a representative sample at the aggregate level, which would explain some non-uniqueness in the data. All this goes to show that it's important to know your data!
 
