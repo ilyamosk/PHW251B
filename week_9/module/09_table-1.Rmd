@@ -19,6 +19,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(flextable)
 library(openxlsx)
+library(writexl)
 library(here)
 library(gt)
 library(gtsummary)
@@ -140,9 +141,9 @@ The `type`, `statistic`, and `digits` parameters go hand in hand with each other
 
 `type` = `categorical` -> `statistic` = "{n} ({p})" -> `digits` = **two numbers** c(digits_for_n, digits_for_p)
 
-`type` = `continuous` -> `statistic` = "{n} ({p})" -> `digits` = **two numbers** c(digits_for_mean, digits_for_sd)
+`type` = `continuous` -> `statistic` = "{mean} ({sd})" -> `digits` = **two numbers** c(digits_for_mean, digits_for_sd)
 
-`type` = `continuous2` - `statistic` = "{median} [{p25}, {p75}]" -> `digits` = **three numbers** -> c(dig_median, dig_p25, dig_p75)
+`type` = `continuous` - `statistic` = "{median} [{p25}, {p75}]" -> `digits` = **three numbers** -> c(dig_median, dig_p25, dig_p75)
 
 ```{r}
 data %>%
@@ -161,7 +162,7 @@ data %>%
       age ~ "continuous"),  
     # Summary statistic outputs
     statistic = list(
-      all_categorical() ~ "{n} ({p})",
+      all_categorical() ~ "{n} ({p}%)",
       # For continuous2 variables, provide two templates (row 1, row 2)
       all_continuous2() ~ c("{mean} ({sd})", "{median} [{p25}, {p75}]"),
       # For 1 row continuous variables, provide 1 template (like age)
@@ -212,7 +213,7 @@ Important parameters
 data %>%
   select(-c(patient_id, heart_disease, insulin, diabetes)) %>%
   tbl_summary(by = glp1) %>%
-  add_overall(last = FALSE, col_label = "Overall")
+  add_overall(last = TRUE, col_label = "Pooled")
 ```
 
 ## Adding footnote
@@ -322,8 +323,8 @@ data %>%
     # font = "Times New Roman"
     ) %>%
   tab_options(
-    table.font.size = px(14), # change font size
-    data_row.padding = px(2) # optional tighter layout
+    table.font.size = px(12), # change font size
+    data_row.padding = px(5) # optional tighter layout
 )
 ```
 

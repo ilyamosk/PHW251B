@@ -1,0 +1,69 @@
+---
+title: "Exercise 3: Table 1"
+author: "YOUR NAME HERE"
+date: "`r format(Sys.time(), '%m-%d-%Y', tz = 'America/Los_Angeles')`"
+params:
+  week: "week_9"
+output:
+  word_document: default
+---
+
+\newpage
+
+# Rmd setup
+
+```{r setup, include=FALSE}
+# Libraries
+library(tidyverse)
+library(flextable)
+library(openxlsx)
+library(here)
+library(gt)
+library(gtsummary)
+
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+\newpage
+
+# Instructions
+
+## Submission 
+
+Please knit your file as a **HTML File** and submit your assignment to **bCourses**.
+
+## Tips 
+
+  - The question in **Exercise 3** is meant to complement `Module: Creating Table 1 in R` in `Week 9`. 
+  
+  - **Exercise 3** is going to use the `glp1_data.csv` dataset that we cleaned in `Module: Creating Table 1 in R`.
+
+\newpage
+
+# Read in Data
+
+```{r}
+# Them, import the dataset
+data <- read_csv(here(params$week, "data", "glp1_data.csv"))
+```
+
+\newpage
+
+# Question 
+
+In `Module: Creating Table 1 in R` we walked through the separate pieces that go into creating a Table 1. Now it is your turn to put everything together and create your own Table 1! Hint - please use the pieces from `09_table-1.Rmd` to put your table together :)
+
+Please include the following pieces in your Table 1
+
+  - Setting proper labelling (`label`) of the characteristics 
+  - Setting the (`type`), statistics (`statistic`), and digits (`digits`) as you wish
+  - Add an overall column (`add_overall`)
+  - Add a p-value column (`add_p`)
+  - Bold significant p-values (`bold_p`)
+  - Use a `theme_gtsummary_journal` and/or `theme_gtsummary_compact` theme
+
+```{r}
+# Table 1 code here
+```
+
+
