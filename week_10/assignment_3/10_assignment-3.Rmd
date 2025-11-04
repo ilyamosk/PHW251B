@@ -1,0 +1,133 @@
+---
+title: "Assignment 3 - Interactive Plots & Tables"
+subtitle: 'PHW251B: Data Visualization for Public Health'
+author: "YOUR NAME HERE"
+date: "`r format(Sys.time(), '%m-%d-%Y', tz = 'America/Los_Angeles')`"
+output:
+  word_document: default
+params:
+  week: week_10
+---
+
+# Introduction
+
+Hello and welcome back to PHW251B: Data Visualization for Public Health! This RMarkdown document will serve as your third coding assignment this semester, meaning that you will complete the assignment to your best of your ability, **knit the file to HTML**, and then submit it to bCourses. 
+
+In this assignment, we're building directly off of the Module #10: Interactive Plots and creating our own dynamic charts and tables. It will be helpful to have worked through that Module before beginning this assignment!
+
+## The Data
+
+Today, we'll be revisiting CalEnviroScreen (CES) 4.0, which is a composite dataset with a host of environmental exposure and health outcome markers produced and maintained by the Office of Environmental Health Hazards Assessment (OEHHA), a branch of California's EPA. It's a relevant dataset that has a continuing influence on how health equity programs are funded and distributed! 
+
+You can read more about CES here: [CES 4.0 website](https://calenviroscreen-oehha.hub.arcgis.com/#CalEnviroScreen)
+
+CES 4.0 is available as both a tabular spreadsheet (.xlsx) and a geospatial shapefile (.shp). Today, we will be using the former, but do feel free to go to the linked website above to download the shapefile for your own practice/exploration.
+
+There are too many variables to list out descriptions in this .rmd, but we have converted the data dictionary for your viewing. 
+
+# Run Package Updates and Versions
+
+Before building update "ggplot2" & "plotly"
+
+```{r, message=FALSE}
+# Update ggplot2 & update plotly
+install.packages("ggplot2")
+install.packages("plotly")
+install.packages("reactable")
+install.packages("openxlsx")
+install.packages("ggiraph")
+```
+
+Then check their versions "ggplot2" & "plotly"
+
+```{r}
+# Check package versions (Check package versions)
+packageVersion("ggplot2") # should be ‘3.5.1’
+packageVersion("plotly") # should be ‘4.10.4’
+```
+
+# Load Packages
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Libraries to load (we've brought over those from the interactive module)
+
+library(dplyr)
+library(here)
+library(openxlsx)
+library(janitor)
+```
+
+
+```{r}
+# Import dataset (first sheet of Excel file)
+ces_data <- read.xlsx(here(params$week, "data", "calenvironment.xlsx"), sheet = 1) %>%
+  clean_names() %>%
+  mutate(california_county = str_trim(california_county))
+
+# Peak at data
+head(ces_data)
+
+# Import dictionary (third sheet of Excel file)
+ces_dict <- read.xlsx(here(params$week, "data", "calenvironment.xlsx"), sheet = 3)
+
+# Rename data dictionary columns
+colnames(ces_dict) <- c("Variable", "Description")
+
+# Interactive table to peak at dictionary
+head(ces_dict)
+```
+
+# The Assignment
+
+Let's dive in! Today we'll be asking you to construct an interactive plot/graph and an interactive table using the CES dataset. 
+
+**Question #1**
+
+Please construct a boxplot that depicts the distribution of the `Low.Birth.Weight` variable across Bay Area counties using `ggplotly`, `plotly`, or `ggiraph`. You'll want to filter the dataset for the nine Bay Area counties first, and then construct your plot. Feel free to add any visual modification that you deem necessary to make it a publication-ready graphic. 
+
+```{r, warning = F}
+# Some libraries that you may need for convenience (you may add more)
+library(ggplot2)
+library(plotly)
+library(ggiraph)
+
+# Define bay area counties to subset data
+bay_area_counties <- c("Alameda", "Contra Costa", "Marin", "Napa", "San Francisco", "San Mateo", "Santa Clara", "Solano", "Sonoma")
+
+# Create your plot here
+
+```
+
+**Question #2**
+
+Next, let's make an interactive table that lets a user view the CES dataset on their own. Construct the table using `DT` or `reactable`.
+
+The entire dataset is likely too large to explore as a table, but let's first summarize the following variables at the **County** level to simplify the data: 
+
+Population-weighted averages for:
+- CES 4.0 Score
+- PM2.5
+- Lead
+- Traffic
+- Pollution Burden
+- Asthma
+- Cardiovascular Disease
+- Housing Burden
+
+**Note: see the `weighted.mean` function for weighted averages**
+
+We'd also like you to round all columns, except for the County name, to 2 decimal points, bold the County column, and turn off rownames.
+
+```{r}
+# Some libraries that you may need for convenience (you may add more)
+library(DT)
+library(reactable)
+
+# Create your table here
+
+```
+
+And that brings us to the end of Assignment 3 -- congrats!Please knit the PDF to HTML and submit it to bCourses whenever you are done.
+
