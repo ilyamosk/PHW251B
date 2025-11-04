@@ -129,5 +129,5 @@ library(reactable)
 
 ```
 
-And that brings us to the end of Assignment 3 -- congrats!Please knit the PDF to HTML and submit it to bCourses whenever you are done.
+And that brings us to the end of Assignment 3 -- congrats! Please knit to **HTML** and submit it to **bCourses** whenever you are done.
 
