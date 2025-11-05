@@ -1,6 +1,6 @@
 ---
-title: 'Lab Module: Dashboards with RMarkdown'
-subtitle: 'PHW251B: Data Visualization for Public Health'
+title: 'Lab Module - Dashboards with RMarkdown'
+subtitle: 'PHW251B - Data Visualization for Public Health'
 output: 
   flexdashboard::flex_dashboard:
     orientation: columns
