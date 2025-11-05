@@ -1,32 +1,41 @@
 ---
-title: 'Lab Module: Dashboards'
+title: 'Lab Module: Dashboards with RMarkdown'
 subtitle: 'PHW251B: Data Visualization for Public Health'
-params:
-  week: "week_11"
 output: 
   flexdashboard::flex_dashboard:
     orientation: columns
     vertical_layout: fill
+params:
+  week: week_11
 ---
 
+
+```{r, include=FALSE}
+# Before getting started please install these packages
+install.packages("ggplot2")
+install.packages("plotly")
+```
+
+
+```{r, include=FALSE}
+# Then check their versions "ggplot2" & "plotly"
+packageVersion("ggplot2") # should be ‘3.5.1’
+packageVersion("plotly") # should be ‘4.10.4’
+```
+
+
 ```{r setup, include=FALSE}
-# Load libraries (replaced pacman)
-library(tidyverse)      # Data management and visualization
-library(here)           # Locate files
-library(flexdashboard)  # Dashboard versions of R Markdown reports
-library(shiny)          # Interactive figures
-library(plotly)         # Interactive figures
-library(sf)             # Mapping
-library(tmap)           # Mapping
-library(DT)             # Datatable
+# Load required libraries
+library(here)   
+library(readr)
+library(dplyr)
+library(flexdashboard) # dashboard versions of R Markdown reports
+```
 
-# Next, download the dataset "ebola_simulated.rds" and save it to a folder named "data" in the same folder on your local drive that contains this RMD.
 
-# Week parameter
-week = params$week
-
-# Them, import the dataset
-data <- read_rds(here(week, "data", "ebola_simulated.rds"))
+```{r read data, include=FALSE}
+# Them, import the rds dataset using `read_rds`
+data <- read_rds(here(params$week, "data", "ebola_simulated.rds"))
 ```
 
 
@@ -53,16 +62,20 @@ Note the different arguments in lines 1-8 at the top of this RMD, which specify 
 
 The line above will create a subsection within the first column. Now we just need to decide what to put in it. In keeping with our recent weeks on GIS, let's put a map!
 
-```{r}
+```{r hospital location}
+# Load 'sf' & 'tmap' libraries
+library(sf)
+library(tmap)          
+
 # Group dataset by hospital
 data_hospital <- data %>%
   group_by(hospital) %>%
   # Number of observations in each group summed = count
-  summarise(count = n(),
-            #median age of patients
-            "Median Age" = round(mean(age, na.rm=TRUE), 1),
-            lat = mean(lat, na.rm = TRUE),
-            lon = mean(lon, na.rm = TRUE)) %>%
+  summarise(Count = n(),
+            # Median age of patients
+            "Median Age" = round(mean(age, na.rm=T), 1),
+            lat = mean(lat, na.rm = T),
+            lon = mean(lon, na.rm = T)) %>%
   # Convert to spatial object
   sf::st_as_sf(coords = c("lon", "lat"), crs = 4326)
   
@@ -75,6 +88,7 @@ tmap_mode("view")
 # Call a basemap, note that it's the first layer b/c it's on the bottom of the map!
 tm_basemap("https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png", group = NULL) +
   
+# Print result
 tm_shape(data_hospital) +
   tm_dots(col = "hospital", size = "Count")
 ```
@@ -86,7 +100,12 @@ tm_shape(data_hospital) +
 
 This line above creates the first subsection within the second column. Let's put a chart here:
 
-```{r}
+```{r epi curve}
+# Load 'ggplot2' & 'plotly' libraries
+library(ggplot2)
+library(plotly)   
+
+# Create epidemic curve by age
 ggplotly(ggplot(data %>% dplyr::filter(is.na(age_cat) == F), 
                 aes(x = date_onset, 
                     fill = age_cat, 
@@ -126,11 +145,11 @@ ggplotly(ggplot(data %>% dplyr::filter(is.na(age_cat) == F),
 
 Here is another subsection for the second column! We can add whatever content we desire for our dashboard: in this case, a table summarizing the number of cases by hospital.
 
-```{r}
-# Our dataset, passed into group-by, by hospital
+```{r cases by hospital}
+# Pipe dataframe into group-by, by hospital
 data %>%
   group_by(hospital) %>%
-  # Count number of observations in each hospital group
+  # Count # of observations in each hospital group
   summarise(Cases = n()) %>%
   # Rename column to be uppercase
   rename("Hospital" = "hospital") %>%
@@ -138,7 +157,9 @@ data %>%
   arrange(desc(Cases)) %>%
   # Pipe to kable -- prettier table!
   knitr::kable()
+
 ```
+
 
 # Data Explorer (Second Page)
 
@@ -154,36 +175,36 @@ The line above adds a second page under a new tab! Let's visualize the dataset a
 }
 ```
 
-```{r, fig.length = 10}
+```{r datatable, fig.length = 10}
+# Load 'DT' library
+library(DT) 
 
 datatable(data %>% select(hospital, date_hospitalisation, outcome, gender, age, bmi, fever), 
-          # Add CSS class for theming
+          #add CSS class for theming
           class = 'cell-border stripe',
-          # Custom column name
+          #custom column name
           colnames = c("Hospital", "Date of Hospitalization", "Outcome", "Gender", "Age", "BMI", "Fever"),
-          # Remove numbered index
+          #remove numbered index
           rownames = F,
-          # Add buttons to export the data within the html (cool!)
-          # Note that the `dom` argument can accept many, check out documentation for more
-          # By calling `Btp`, we keep buttons (B), the table itself (t), and pagination control (p) 
+          #add buttons to export the data within the html (cool!)
+          #note that the `dom` argument can accept many, check out documentation for more
+          #by calling `Btp`, we keep buttons (B), the table itself (t), and pagination control (p) 
           extensions = 'Buttons', options = list(dom = 'Btpl',
                                                  buttons = c('copy', 
                                                              'csv', 
                                                              'excel', 
                                                              'pdf', 
                                                              'print'),
-                                                 # How many entries per page
+                                                 #how many entries per page
                                                  pageLength = 10,
-                                                 # Options for "Show how many entries"
+                                                 #options for "Show how many entries"
                                                  lengthMenu = c(10, 20, 30)),
           height = "fit-content") %>%
-  # Bold the `city_ascii` column
+  #bold the `city_ascii` column
   formatStyle("hospital", fontWeight = "bold") %>%
-  # Round the `aqi` column to one decimal place
+  #round the `aqi` column to one decimal place
   formatRound("bmi", 1)
 
 ```
-
-&nbsp;
 
 And that's the end of this module -- in essence, it's just a new way to organize and use an RMD to output a different product. And there are many more customizations and additional arguments that can further enhance your dashboard product, so be sure to take a look at the assigned chapter to learn about the possibilities! The final step is to click "Knit to flex_dashboard". This will give you an HTML document that you can share with others.
