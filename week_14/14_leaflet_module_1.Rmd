@@ -154,11 +154,8 @@ map %>% addProviderTiles(providers$CartoDB.Positron)
 # Use the "Stamen.Toner" theme for the map
 map %>% addProviderTiles("Stamen.Toner")
 
-# Replace or add a new comment for the next line: Use the "Esri.NatGeoWorldMap" theme for the map
+# Use the "Esri.NatGeoWorldMap" theme for the map
 map %>% addProviderTiles("Esri.NatGeoWorldMap")
-
-# Specify a custom map tile URL template as an argument to addTiles
-map %>% addTiles("https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png")
 
 # Explore more built-in Provider themes in R - in this case, CartoDB Voyager
 map %>% addProviderTiles(providers$CartoDB.Voyager)

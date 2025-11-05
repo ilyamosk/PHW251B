@@ -9,7 +9,6 @@ output:
     df_print: paged
 ---
 
-
 ***************************************************
 
 # Part 1: Loading Libraries and Reading in Data 
@@ -50,10 +49,6 @@ df_ucsf <- df_hospitals %>%
 df_cedars <- df_hospitals %>%
   filter(str_detect(name, 'CEDARS'))
 
-# Kaiser Permanente hospitals df
-df_kaiser <- df_hospitals %>%
-  filter(str_detect(name, 'KAISER'))
-
 # UCSD hospitals df
 df_ucsd <- df_hospitals %>%
   filter(str_detect(name, 'UC SAN DIEGO'))
@@ -61,6 +56,10 @@ df_ucsd <- df_hospitals %>%
 # Stanford hospitals df
 df_stanford <- df_hospitals %>%
   filter(str_detect(name, 'STANFORD'))
+
+# Kaiser Permanente hospitals df
+df_kaiser <- df_hospitals %>%
+  filter(str_detect(name, 'KAISER'))
 ```
 
 ***************************************************
@@ -84,12 +83,6 @@ spdf_ucsf <- SpatialPointsDataFrame(
   data = df_ucsf[,c('name','address','beds','telephone')],
   proj4string = CRS(SRS_string = "EPSG:4326")) # NOTE: updated from the video
 
-# Create SpatialPointsDataFrame for Kaiser Permanente hospitals
-spdf_kaiser <- SpatialPointsDataFrame(
-  coords = df_kaiser[,c('longitude','latitude')],
-  data = df_kaiser[,c('name','address','beds','telephone')],
-  proj4string = CRS(SRS_string = "EPSG:4326")) # NOTE: updated from the video 
-
 # Create SpatialPointsDataFrame for Cedars Sinai hospitals
 spdf_cedars <- SpatialPointsDataFrame(
   coords = df_cedars[,c('longitude','latitude')],
@@ -107,6 +100,12 @@ spdf_stanford <- SpatialPointsDataFrame(
   coords = df_stanford[,c('longitude','latitude')],
   data = df_stanford[,c('name','address','beds','telephone')],
   proj4string = CRS(SRS_string = "EPSG:4326")) # NOTE: updated from the video
+
+# Create SpatialPointsDataFrame for Kaiser Permanente hospitals
+spdf_kaiser <- SpatialPointsDataFrame(
+  coords = df_kaiser[,c('longitude','latitude')],
+  data = df_kaiser[,c('name','address','beds','telephone')],
+  proj4string = CRS(SRS_string = "EPSG:4326")) # NOTE: updated from the video 
 ```
 
 ***************************************************
@@ -171,23 +170,6 @@ map <- leaflet() %>%
     group= "Cedars Sinai"
   ) %>%
   
-  # Kaiser Permanente Layer
-  addCircleMarkers(
-    data = spdf_kaiser, # Specify Kaiser SPDF
-    color = 'white',    
-    weight = 1,         
-    fillColor = 'blue', 
-    fillOpacity = 0.7,  
-    radius = 2.5,
-    popup = paste(
-      'Corporation name:', spdf_kaiser$name, '<br>', # Specify "name" column in Kaiser SPDF
-      'address:', spdf_kaiser$address, '<br>',       # Specify "address" column in Kaiser SPDF
-      'beds:', spdf_kaiser$beds, '<br>',             # Specify "beds" column in Kaiser SPDF 
-      'Phone:', spdf_kaiser$telephone, '<br>'        # Specify "telephone" column in Kaiser SPDF
-    ),
-    group= "Kaiser Permanente"
-  ) %>%
-  
   # UCSD Layer
   addCircleMarkers(
     data = spdf_ucsd, # Specify UCSD SPDF
@@ -229,7 +211,24 @@ map <- leaflet() %>%
     labels = c('Hospital'), 
     colors = c('blue'),     
     opacity = 1             
-  ) 
+  ) %>%
+  
+  # Kaiser Permanente Layer
+  addCircleMarkers(
+    data = spdf_kaiser, # Specify Kaiser SPDF
+    color = 'white',    
+    weight = 1,         
+    fillColor = 'blue', 
+    fillOpacity = 0.7,  
+    radius = 2.5,
+    popup = paste(
+      'Corporation name:', spdf_kaiser$name, '<br>', # Specify "name" column in Kaiser SPDF
+      'address:', spdf_kaiser$address, '<br>',       # Specify "address" column in Kaiser SPDF
+      'beds:', spdf_kaiser$beds, '<br>',             # Specify "beds" column in Kaiser SPDF 
+      'Phone:', spdf_kaiser$telephone, '<br>'        # Specify "telephone" column in Kaiser SPDF
+    ),
+    group= "Kaiser Permanente"
+  )
 ```
 
 ***************************************************
@@ -243,7 +242,7 @@ map %>%
 # Add a layer control
   addLayersControl(
     overlayGroups = c("UCLA", "UCSF", "Cedars Sinai", 
-                      "Kaiser Permanente", "UCSD", "Stanford"),   
+                       "UCSD", "Stanford", "Kaiser Permanente"),   
     options = layersControlOptions(collapsed = TRUE) # Collapsing the Layer control
   )
 ```
@@ -255,7 +254,7 @@ map %>%
 # Add a layer control
   addLayersControl(
     overlayGroups = c("UCLA", "UCSF", "Cedars Sinai", 
-                      "Kaiser Permanente", "UCSD", "Stanford"),   
+                      "UCSD", "Stanford", "Kaiser Permanente"),   
     options = layersControlOptions(collapsed = FALSE) # Expanded by default
   )
 ```

@@ -1,0 +1,189 @@
+---
+title: 'Lab Module: Dashboards'
+subtitle: 'PHW251B: Data Visualization for Public Health'
+params:
+  week: "week_11"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+---
+
+```{r setup, include=FALSE}
+# Load libraries (replaced pacman)
+library(tidyverse)      # Data management and visualization
+library(here)           # Locate files
+library(flexdashboard)  # Dashboard versions of R Markdown reports
+library(shiny)          # Interactive figures
+library(plotly)         # Interactive figures
+library(sf)             # Mapping
+library(tmap)           # Mapping
+library(DT)             # Datatable
+
+# Next, download the dataset "ebola_simulated.rds" and save it to a folder named "data" in the same folder on your local drive that contains this RMD.
+
+# Week parameter
+week = params$week
+
+# Them, import the dataset
+data <- read_rds(here(week, "data", "ebola_simulated.rds"))
+```
+
+
+# Overview (First Page)
+
+## Column 1 {data-width=550}
+
+Welcome back to PHW251B! Today we're covering dashboards with RMarkdown and `flexdashboard`. The layout of this module is a bit different than what we're normally used to, because this is a ready-to-knit dashboard! I recommend working through each step of the code to see what it does and then under Knit select "Knit to flex_dashboard".
+
+This example is based on the assigned chapter from the Epidemiologist R Handbook, which can be found here: <https://epirhandbook.com/en/dashboards-with-r-markdown.html>
+
+
+Note the different arguments in lines 1-8 at the top of this RMD, which specify that the output when you knit this document will be a flex_dashboard organized in columns. In a flexdashboard RMD, the hashes (#) we have previously used to create HTML headers now dictate different parts of the dashboard:
+
+  # Creates a new page
+  
+  ## Creates a column or a row (columns/rows are determined by line 6!)
+      These can take an additional argument for width, as seen in this document.
+      
+  ### Creates a subsection within that column or row
+
+
+### Hospital Location
+
+The line above will create a subsection within the first column. Now we just need to decide what to put in it. In keeping with our recent weeks on GIS, let's put a map!
+
+```{r}
+# Group dataset by hospital
+data_hospital <- data %>%
+  group_by(hospital) %>%
+  # Number of observations in each group summed = count
+  summarise(count = n(),
+            #median age of patients
+            "Median Age" = round(mean(age, na.rm=TRUE), 1),
+            lat = mean(lat, na.rm = TRUE),
+            lon = mean(lon, na.rm = TRUE)) %>%
+  # Convert to spatial object
+  sf::st_as_sf(coords = c("lon", "lat"), crs = 4326)
+  
+# Here I'm using a different library than you may have seen for mapping in R: tmaps!
+# tmaps is a quick and easy-to-use interactive mapping library that interfaces with sf objects
+
+# Set tmap mode to interactive
+tmap_mode("view")
+
+# Call a basemap, note that it's the first layer b/c it's on the bottom of the map!
+tm_basemap("https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png", group = NULL) +
+  
+tm_shape(data_hospital) +
+  tm_dots(col = "hospital", size = "Count")
+```
+
+
+## Column 2 {data-width=450}
+
+### Epidemic curve by age
+
+This line above creates the first subsection within the second column. Let's put a chart here:
+
+```{r}
+ggplotly(ggplot(data %>% dplyr::filter(is.na(age_cat) == F), 
+                aes(x = date_onset, 
+                    fill = age_cat, 
+                    color = age_cat, 
+                    text = paste("Age Category:", age_cat))) + 
+  geom_histogram(binwidth = 15, alpha = 0.75) +
+  scale_fill_manual(values = c("#fde725",
+                                "#b5de2b",
+                                "#6ece58",
+                                "#35b779",
+                                "#1f9e89",
+                                "#26828e",
+                                "#31688e",
+                                "#3e4989",
+                                "#482878",
+                                "#440154")) + 
+  scale_color_manual(values = c("#fde725",
+                                "#b5de2b",
+                                "#6ece58",
+                                "#35b779",
+                                "#1f9e89",
+                                "#26828e",
+                                "#31688e",
+                                "#3e4989",
+                                "#482878",
+                                "#440154")) + 
+  theme(panel.background = element_rect(fill = NA),
+        panel.grid = element_line(linetype = 3, color = "grey90")) +
+    labs(x = "\nDate of onset",
+         y = "Count\n",
+         fill = "Age Category\n",
+         color = "Age Category\n"), tooltip = "text")
+```
+
+
+### Cases by Hospital 
+
+Here is another subsection for the second column! We can add whatever content we desire for our dashboard: in this case, a table summarizing the number of cases by hospital.
+
+```{r}
+# Our dataset, passed into group-by, by hospital
+data %>%
+  group_by(hospital) %>%
+  # Count number of observations in each hospital group
+  summarise(Cases = n()) %>%
+  # Rename column to be uppercase
+  rename("Hospital" = "hospital") %>%
+  # Sort such that cases are descending
+  arrange(desc(Cases)) %>%
+  # Pipe to kable -- prettier table!
+  knitr::kable()
+```
+
+# Data Explorer (Second Page)
+
+The line above adds a second page under a new tab! Let's visualize the dataset as an interactive table for viewers to explore:
+
+```{css, echo=FALSE}
+.datatables.html-widget.html-widget-static-bound { 
+  height: auto !important;
+  width: 90vw !important;
+}
+.dataTables_scrollBody {
+  height: unset !important;
+}
+```
+
+```{r, fig.length = 10}
+
+datatable(data %>% select(hospital, date_hospitalisation, outcome, gender, age, bmi, fever), 
+          # Add CSS class for theming
+          class = 'cell-border stripe',
+          # Custom column name
+          colnames = c("Hospital", "Date of Hospitalization", "Outcome", "Gender", "Age", "BMI", "Fever"),
+          # Remove numbered index
+          rownames = F,
+          # Add buttons to export the data within the html (cool!)
+          # Note that the `dom` argument can accept many, check out documentation for more
+          # By calling `Btp`, we keep buttons (B), the table itself (t), and pagination control (p) 
+          extensions = 'Buttons', options = list(dom = 'Btpl',
+                                                 buttons = c('copy', 
+                                                             'csv', 
+                                                             'excel', 
+                                                             'pdf', 
+                                                             'print'),
+                                                 # How many entries per page
+                                                 pageLength = 10,
+                                                 # Options for "Show how many entries"
+                                                 lengthMenu = c(10, 20, 30)),
+          height = "fit-content") %>%
+  # Bold the `city_ascii` column
+  formatStyle("hospital", fontWeight = "bold") %>%
+  # Round the `aqi` column to one decimal place
+  formatRound("bmi", 1)
+
+```
+
+&nbsp;
+
+And that's the end of this module -- in essence, it's just a new way to organize and use an RMD to output a different product. And there are many more customizations and additional arguments that can further enhance your dashboard product, so be sure to take a look at the assigned chapter to learn about the possibilities! The final step is to click "Knit to flex_dashboard". This will give you an HTML document that you can share with others.

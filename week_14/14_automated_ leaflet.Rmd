@@ -159,7 +159,7 @@ The function is will have 2 inputs.
 
 ```{r}
 # Define the vector of SpatialPointsDataFrame names
-vector_of_names <- c("transformed_1","transformed_2","transformed_3","transformed_4")
+vector_of_names <- c("transformed_1", "transformed_2", "transformed_3", "transformed_4")
 
 multiply_by_2_v2 <- function(input_list, output_names) {
   # Create a new list to store the results
@@ -208,10 +208,10 @@ hospitals_ca <- read_csv(here(week, "data", "Hospitals.csv")) %>%
 vector_groups <- c("UCLA", "UCSF", "CEDARS", "KAISER", "UC SAN DIEGO", "STANFORD")
 
 # Define the vector of data frames names
-vector_df_names <- c("df_ucla", "df_ucsf", "df_cedars","df_kaiser", "df_ucsd", "df_stanford")
+vector_df_names <- c("df_ucla", "df_ucsf", "df_cedars", "df_kaiser", "df_ucsd", "df_stanford")
 
 # Define the vector of SpatialPointsDataFrame names
-vector_spdf_names <- c("spdf_ucla", "spdf_ucsf", "spdf_cedars","spdf_kaiser", "spdf_ucsd", "spdf_stanford")
+vector_spdf_names <- c("spdf_ucla", "spdf_ucsf", "spdf_cedars", "spdf_kaiser", "spdf_ucsd", "spdf_stanford")
 ```
 
 \newpage

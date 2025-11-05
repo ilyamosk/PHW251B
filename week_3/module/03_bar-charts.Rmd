@@ -40,7 +40,7 @@ Helpful Resources:
 
 ## The Data
 
-For this exercise we are going to be using a simulated dataset for an observational electronic health record study on evaluating whether `GLP-1 agonists are protective against developing heart disease`. This dataset mimics the type of data that you would encounter when working with in a healthcare setting.  
+For this module we are going to be using a simulated dataset for an observational electronic health record study on evaluating whether `GLP-1 agonists are protective against developing heart disease`. This dataset mimics the type of data that you would encounter when working with in a healthcare setting.  
 
 As background, `GLP-1 agonists` are a class of medications that are clinically used to manage blood sugar (glucose) levels in people with Type 2 diabetes and can also help treat obesity. The most commonly known GLP-1 agonist is `Ozempic`. The `inclusion criteria` for this cohort was having a diagnosis of 2 diabetes, actively using `insulin`, and being aged 65+ at baseline.
 
