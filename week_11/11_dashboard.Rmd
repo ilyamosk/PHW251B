@@ -207,4 +207,4 @@ datatable(data %>% select(hospital, date_hospitalisation, outcome, gender, age, 
 
 ```
 
-And that's the end of this module -- in essence, it's just a new way to organize and use an RMD to output a different product. And there are many more customizations and additional arguments that can further enhance your dashboard product, so be sure to take a look at the assigned chapter to learn about the possibilities! The final step is to click "Knit to flex_dashboard". This will give you an HTML document that you can share with others.
+And that's the end of this module -- in essence, it's just a new way to organize and use an RMD to output a different product. And there are many more customizations and additional arguments that can further enhance your dashboard product, so be sure to take a look at the assigned chapter to learn about the possibilities! The final step is to click **"Knit to flex_dashboard"**. This will give you an HTML document that you can share with others.
