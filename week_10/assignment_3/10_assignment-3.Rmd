@@ -4,7 +4,8 @@ subtitle: 'PHW251B: Data Visualization for Public Health'
 author: "YOUR NAME HERE"
 date: "`r format(Sys.time(), '%m-%d-%Y', tz = 'America/Los_Angeles')`"
 output:
-  word_document: default
+  html_document: default
+    self_contained: false
 params:
   week: week_10
 ---
