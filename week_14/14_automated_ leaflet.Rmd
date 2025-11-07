@@ -6,6 +6,7 @@ params:
   week: "week_14"
 output: 
   html_document:
+    self_contained: false
     toc: yes
     df_print: paged
 ---

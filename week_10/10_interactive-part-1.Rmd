@@ -6,6 +6,7 @@ author:
 subtitle: 'PHW251B: Data Visualization for Public Health'
 output:
   html_document:
+    self_contained: false
     df_print: paged
   pdf_document: default
 params:
