@@ -100,6 +100,14 @@ week = params$week
 # Load rdata file with raw data
 load(file = here::here(week, "data", "ca_aqi.rdata"))
 
+# Create list of Bay Area cities plus LA that we'll filter for
+bay_area_la_cities <- c("San Francisco", "San Jose", "Santa Rosa", "Vallejo", 
+                        "Napa", "Santa Cruz", "Los Angeles")
+
+# Filter for just the cities in bay area and LA
+ca_aqi <- ca_aqi %>%
+  filter(city_ascii %in% bay_area_la_cities)
+
 # Take a peek!
 head(ca_aqi)
 ```
@@ -139,7 +147,9 @@ After doing the above exploration of the `category` variable, we can make a grou
 # Update ggplot2 & update plotly
 install.packages("ggplot2")
 install.packages("plotly")
+```
 
+```{r}
 # Check package versions (Check package versions)
 packageVersion("ggplot2") # should be ‘3.5.1’
 packageVersion("plotly") # should be ‘4.10.4’
@@ -446,15 +456,30 @@ Let's move onto some bivariate plots!
 library(sf)
 library(tigris)
 
+# Create list of Bay Area Counties plus LA Countythat we'll filter for
+bayarea_counties_plus_la <- c("San Francisco", "Alameda", "Contra Costa", "Santa Clara", "San Mateo", 
+                              "Marin", "Solano", "Sonoma", "Napa", "Santa Cruz", "San Benito", "Los Angeles")
+
 # Use the tigris library again to pull county shapefiles 
 counties <- tigris::counties(state = "California", progress_bar = FALSE) %>%
-  janitor::clean_names() # Replaced rename_with(~ tolower(gsub(" ","_", .x, fixed=TRUE)))
+  janitor::clean_names() %>% # Replaced rename_with(~ tolower(gsub(" ","_", .x, fixed=TRUE)))
+  filter(name %in% bayarea_counties_plus_la) %>% 
+  rename(county = name) %>% 
+  select(county, geometry)
+
+# Create list of Bay Area cities plus LA that we'll filter for
+bay_area_la_cities <- c("San Francisco", "San Jose", "Santa Rosa", "Vallejo", 
+                        "Napa", "Santa Cruz", "Los Angeles")
+
+# Filter for just the cities in bay area and LA
+ca_aqi_filtered <- ca_aqi %>%
+  filter(city_ascii %in% bay_area_la_cities)
 
 # Convert the ca_aqi dataset into an sf object, setting crs = 4269 (same as counties)
-ca_aqi_geo <- sf::st_as_sf(ca_aqi, coords = c("lng", "lat"), crs = 4269)
+ca_aqi_geo <- sf::st_as_sf(ca_aqi_filtered, coords = c("lng", "lat"), crs = 4269)
 
 # Here, we'll indicate that we want to keep the geometry of ca_aqi (points, indicated by the lat/long) but we do want to know which counties it is within (y = counties)
-ca_aqi_geo <- sf::st_join(x = ca_aqi_geo, y = counties %>% rename("county" = "name") %>% select(county, geometry), left = TRUE)
+ca_aqi_geo <- sf::st_join(x = ca_aqi_geo, y = counties, left = TRUE)
 
 # You'll note that in the geometry field it stays as a sfc_POINT, instead of MULTIPOLYGON, and we have one more column called "county"
 head(ca_aqi_geo)
@@ -603,6 +628,8 @@ Skipping discrete labels: <https://stackoverflow.com/questions/66275692/r-skip-l
 R Epidemiologist Handbook Chapter 33: <https://epirhandbook.com/en/demographic-pyramids-and-likert-scales.html>
 
 ```{r aqi sbs 1}
+library(lemon)
+
 # Create dataset for side-by-side barchart of AQI values, done without geometry
 aqi_cut_cat <- st_drop_geometry(ca_aqi_geo) %>%
   # Create categories with breaks every 20 units of AQI 
@@ -927,6 +954,11 @@ This was a brief introduction to ggigraph, but hopefully it illustrates the pote
 
 ## Interactive Tables in R
 
+```{r}
+install.packages("sparkline")
+```
+
+
 ```{r load pkgs for interactive tables}
 library(DT)
 library(reactable)
@@ -1066,30 +1098,3 @@ reactable(reactable_data,
 
 
 And there you have it! A brief survey of just some of several interactivity methods available to us in R. There are unlimited possibilities in visualization, and while some are more involved than others (and may require more patience with searching up documentation), the deep investment in development within the R community points to having a solution more often than not. We recommend you exploring the linked resources at the beginning of this module (especially `plotly`'s) for more examples. As always, post any questions to EdStem!
-
-```{r}
-library(ggplot2)
-library(plotly)
-
-df <- as.data.frame(aqi_categories_percentage)
-df$category <- as.character(df$category)  # drop factor complications
-
-p0 <- ggplot(df, aes(x = category, y = percentage)) +
-  geom_col()
-
-ggplotly(p0)
-
-```
-```{r}
-# Close all plots, save work, then run:
-pkgs <- c("plotly","ggplot2","scales","rlang","vctrs","gtable","withr","farver")
-for (p in pkgs) if (p %in% rownames(installed.packages())) remove.packages(p)
-
-install.packages(pkgs, repos = "https://cloud.r-project.org", dependencies = TRUE)
-
-# Restart R *completely*, then:
-library(ggplot2); library(plotly)
-packageVersion("ggplot2"); packageVersion("plotly")
-
-```
-
