@@ -5,18 +5,27 @@ author: "YOUR NAME HERE"
 date: "`r format(Sys.time(), '%m-%d-%Y', tz = 'America/Los_Angeles')`"
 output:
   html_document:
-    self_contained: false
+    self_contained: true
+    df_print: paged       # avoids giant inline tables
+    mathjax: null         # drop MathJax if you don't need LaTeX
+    highlight: null       # drop code highlighting CSS
+    pandoc_args: ["--to=html5"]
 params:
   week: week_10
 ---
 
-
-
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+# Smaller JSON for htmlwidgets
+options(htmlwidgets.TOJSON_ARGS = list(dataframe = "rows"))
 
+# Lighter, faster raster for static figures (if any)
+knitr::opts_chunk$set(dev = "ragg_png", dpi = 96)
+
+# Libraries
 library(dplyr)
 library(here)
+library(purrr)
+library(readr)
 ```
 
 \newpage
@@ -93,6 +102,12 @@ Then check their versions "ggplot2" & "plotly"
 # Check package versions (Check package versions)
 packageVersion("ggplot2") # should be ‘3.5.1’
 packageVersion("plotly") # should be ‘4.10.4’
+```
+
+```{r}
+# More libraries with correct versions
+library(ggplot2)
+library(plotly)
 ```
 
 

@@ -1,15 +1,13 @@
 ---
-title: 'Lab Module - Dashboards with RMarkdown'
-subtitle: 'PHW251B - Data Visualization for Public Health'
-output: 
+title: "Lab Module - Dashboards with RMarkdown"
+subtitle: "PHW251B - Data Visualization for Public Health"
+output:
   flexdashboard::flex_dashboard:
-    self_contained: false
     orientation: columns
     vertical_layout: fill
 params:
-  week: week_11
+  week: "week_11"
 ---
-
 
 ```{r, include=FALSE}
 # Before getting started please install these packages
