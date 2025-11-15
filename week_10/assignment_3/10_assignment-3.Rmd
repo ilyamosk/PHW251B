@@ -32,9 +32,9 @@ There are too many variables to list out descriptions in this .rmd, but we have 
 
 # Run Package Updates and Versions
 
-Before building update "ggplot2" & "plotly"
+Install the following packages (IMPORTANT for "ggplot2" & "plotly")
 
-```{r, message=FALSE}
+```{r install, message=FALSE}
 # Update ggplot2 & update plotly
 install.packages("ggplot2")
 install.packages("plotly")
@@ -45,7 +45,7 @@ install.packages("ggiraph")
 
 Then check their versions "ggplot2" & "plotly"
 
-```{r}
+```{r versions}
 # Check package versions (Check package versions)
 packageVersion("ggplot2") # should be ‘3.5.1’
 packageVersion("plotly") # should be ‘4.10.4’
@@ -63,7 +63,7 @@ knitr::opts_chunk$set(dev = "ragg_png", dpi = 96)
 
 # Load Packages
 
-```{r setup, include=FALSE}
+```{r libraries, include=FALSE}
 # Libraries to load (we've brought over those from the interactive module)
 library(dplyr)
 library(here)
@@ -99,7 +99,7 @@ Let's dive in! Today we'll be asking you to construct an interactive plot/graph 
 
 Please construct a boxplot that depicts the distribution of the `Low.Birth.Weight` variable across Bay Area counties using `ggplotly`, `plotly`, or `ggiraph`. You'll want to filter the dataset for the nine Bay Area counties first, and then construct your plot. Feel free to add any visual modification that you deem necessary to make it a publication-ready graphic. 
 
-```{r, warning = F}
+```{r q1, warning = F}
 # Some libraries that you may need for convenience (you may add more)
 library(ggplot2)
 library(plotly)
@@ -132,7 +132,7 @@ Population-weighted averages for:
 
 We'd also like you to round all columns, except for the County name, to 2 decimal points, bold the County column, and turn off rownames.
 
-```{r}
+```{r q2}
 # Some libraries that you may need for convenience (you may add more)
 library(DT)
 library(reactable)
