@@ -2,7 +2,7 @@
 title: "Leaflet Module 1: Introduction"
 author: "Ilya Moskalenko"
 params:
-  week: "week_14"
+  week: "week_15"
 output: 
   html_document:
     self_contained: false
