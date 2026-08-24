@@ -140,22 +140,22 @@ R files and datasets to learn how to create a dashboard. will be available on Da
 
 ## Week 14
 
-### Lab Module 1 — Intro to Interactive GIS Mapping (14_leaflet_module_1.Rmd) 
+### Static GIS Mapping (14_choropleth-maps.Rmd)
 
-Module 1 provides you with an introduction to interactive mapping with the `leaflet` package.
-
-### Lab Module 2 — Intro to Interactive GIS Mapping (14_leaflet_module_2.Rmd) 
-
-Module 2 introduces and teaches how to implement layer control in your interactive maps.
-
-### Lab Module 3 — Intro to Interactive GIS Mapping (14_automated_ leaflet.Rmd) 
-
-Module 3 introduces and teaches how to implement functions and loops to automate repetitive patterns.
+This module introduces and teaches how to build Choropleth maps. These are static maps different shades of color to represent information about various areas on a map. 
 
 ---
 
 ## Week 15
 
-### Static GIS Mapping (15_choropleth-maps.Rmd)
+### Lab Module 1 — Intro to Interactive GIS Mapping (15_leaflet_module_1.Rmd) 
 
-This module introduces and teaches how to build Choropleth maps. These are static maps different shades of color to represent information about various areas on a map. 
+Module 1 provides you with an introduction to interactive mapping with the `leaflet` package.
+
+### Lab Module 2 — Intro to Interactive GIS Mapping (15_leaflet_module_2.Rmd) 
+
+Module 2 introduces and teaches how to implement layer control in your interactive maps.
+
+### Lab Module 3 — Intro to Interactive GIS Mapping (15_automated_leaflet.Rmd) 
+
+Module 3 introduces and teaches how to implement functions and loops to automate repetitive patterns.
