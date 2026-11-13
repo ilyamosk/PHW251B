@@ -3,7 +3,7 @@ title: "Leaflet Module 3: Automation"
 author: "Ilya Moskalenko"
 date: "`r Sys.Date()`"
 params:
-  week: "week_14"
+  week: "week_15"
 output: 
   html_document:
     self_contained: false

@@ -2,7 +2,7 @@
 title: "Lab Module: Choropleth Maps"
 subtitle: "PHW251B: Data Visualization for Public Health"
 params:
-  week: "week_15"
+  week: "week_14"
 output: pdf_document
 ---
 
