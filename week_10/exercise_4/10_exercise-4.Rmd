@@ -117,8 +117,6 @@ library(plotly)
 
 Use the `top5_df` dataframe we've prepared above (the 5 cities with highest average AQI in California) from `Lab Module: Interactive Plots & Tables` and create either an interactive **violin plot** or an interactive **box plot** to depict the spread of AQI measurements across the five cities using`ggplot` with a `ggplotly` conversion.
 
-Of importance is to take note as to how the tooltip is being generated. Refer to the code from `Lab Module: Interactive Plots & Tables` to customize the tooltip if you deem it necessary.
-
 ```{r}
 
 ```
