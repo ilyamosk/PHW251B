@@ -213,7 +213,7 @@ Important parameters
 data %>%
   select(-c(patient_id, heart_disease, insulin, diabetes)) %>%
   tbl_summary(by = glp1) %>%
-  add_overall(last = TRUE, col_label = "Pooled")
+  add_overall(last = FALSE, col_label = "Pooled")
 ```
 
 ## Adding footnote

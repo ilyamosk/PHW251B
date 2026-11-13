@@ -6,9 +6,9 @@ date: "`r format(Sys.time(), '%m-%d-%Y', tz = 'America/Los_Angeles')`"
 output:
   html_document: default
     self_contained: true
-    df_print: paged       # avoids giant inline tables
-    mathjax: null         # drop MathJax if you don't need LaTeX
-    highlight: null       # drop code highlighting CSS
+    df_print: paged       
+    mathjax: null         
+    highlight: null       
     pandoc_args: ["--to=html5"]
 params:
   week: week_10
@@ -16,9 +16,34 @@ params:
 
 # Introduction
 
-Hello and welcome back to PHW251B: Data Visualization for Public Health! This RMarkdown document will serve as your third coding assignment this semester, meaning that you will complete the assignment to your best of your ability, **knit the file to HTML**, and then submit it to bCourses. 
+Hello and welcome back to PHW251B: Data Visualization for Public Health! This RMarkdown document will serve as your third coding assignment this semester. In this assignment, we're building directly off of the Module #10: Interactive Plots and creating our own dynamic charts and tables. It will be helpful to have worked through that Module before beginning this assignment!
 
-In this assignment, we're building directly off of the Module #10: Interactive Plots and creating our own dynamic charts and tables. It will be helpful to have worked through that Module before beginning this assignment!
+# Submission Instructions
+
+**Knit the file to HTML**, and then submit it to bCourses. 
+
+## KNITTING ERROR WORKAROUNDS
+
+If you experience any knitting errors with this assignment please do the following - 
+
+### Step 1 -
+
+- Make sure that YAML settings are configured properly with following parameters
+    output:
+      html_document: default
+        self_contained: true
+        df_print: paged       
+        pandoc_args: ["--to=html5"]
+- Make sure that you installed all packages needed and that the package version for `ggplot2` is ‘3.5.1’ and package version for `ggplot2` is ‘3.5.1’ package version for `plotly` is ‘4.10.4’
+
+### Step 2 -
+
+- In the code chunks that prompt the errors -> set `echo=TRUE, eval=FALSE`. This is going to display your code without rendering your visualization (this is the important piece for grading!) as we learned in Week 1 of the course. Upload this knitted HTML version.
+- Take a screen shot of the plot(s) that you created that did not render and upload those along with your HTML to Assignment 3 (more than 1 upload are permitted)
+
+# Rubric
+
+See the rubric for in **bCourses** Assignments Sidebar Tab -> Assignment 3.
 
 ## The Data
 
@@ -72,7 +97,7 @@ library(janitor)
 ```
 
 
-```{r}
+```{r, include = FALSE}
 # Import dataset (first sheet of Excel file)
 ces_data <- read.xlsx(here(params$week, "data", "calenvironment.xlsx"), sheet = 1) %>%
   clean_names() %>%
@@ -99,7 +124,7 @@ Let's dive in! Today we'll be asking you to construct an interactive plot/graph 
 
 Please construct a boxplot that depicts the distribution of the `Low.Birth.Weight` variable across Bay Area counties using `ggplotly`, `plotly`, or `ggiraph`. You'll want to filter the dataset for the nine Bay Area counties first, and then construct your plot. Feel free to add any visual modification that you deem necessary to make it a publication-ready graphic. 
 
-```{r q1, warning = F}
+```{r q1, warning = FALSE, echo=TRUE, eval=TRUE}
 # Some libraries that you may need for convenience (you may add more)
 library(ggplot2)
 library(plotly)
@@ -132,7 +157,7 @@ Population-weighted averages for:
 
 We'd also like you to round all columns, except for the County name, to 2 decimal points, bold the County column, and turn off rownames.
 
-```{r q2}
+```{r q2, echo=TRUE, eval=TRUE}
 # Some libraries that you may need for convenience (you may add more)
 library(DT)
 library(reactable)

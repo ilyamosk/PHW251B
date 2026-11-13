@@ -14,7 +14,7 @@ params:
 install.packages("ggplot2")
 install.packages("plotly")
 ```
-
+Í
 
 ```{r, include=FALSE}
 # Then check their versions "ggplot2" & "plotly"
